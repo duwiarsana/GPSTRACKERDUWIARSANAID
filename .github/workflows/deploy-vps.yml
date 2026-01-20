@@ -85,8 +85,11 @@ jobs:
             ./ "$VPS_USER@$VPS_HOST:$APP_DIR/"
 
       - name: Install, build, and restart on VPS
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_DEFAULT_CHAT_ID: ${{ secrets.TELEGRAM_DEFAULT_CHAT_ID }}
         run: |
-          ssh -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" <<SSH
+          ssh -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" bash -s <<SSH
           set -euo pipefail
 
           export PATH=/usr/bin:$PATH
@@ -94,9 +97,31 @@ jobs:
           APP_DIR="$APP_DIR"
           WEB_DIR="$WEB_DIR"
           PM2_NAME="$PM2_NAME"
+          TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN"
+          TELEGRAM_DEFAULT_CHAT_ID="$TELEGRAM_DEFAULT_CHAT_ID"
+
+          : "${APP_DIR:?}"
+          : "${WEB_DIR:?}"
+          : "${PM2_NAME:?}"
 
           test -f "$APP_DIR/backend/.env" || (echo "Missing $APP_DIR/backend/.env" && exit 1)
           test -f "$APP_DIR/frontend/.env" || (echo "Missing $APP_DIR/frontend/.env" && exit 1)
+
+          upsert_env() {
+            key="$1"
+            val="$2"
+            file="$3"
+            [ -n "$val" ] || return 0
+            if grep -q "^${key}=" "$file"; then
+              esc=$(printf '%s' "$val" | sed -e 's/[\\/&]/\\\\&/g')
+              sed -i "s|^${key}=.*|${key}=${esc}|" "$file"
+            else
+              printf '\n%s=%s\n' "$key" "$val" >> "$file"
+            fi
+          }
+
+          upsert_env TELEGRAM_BOT_TOKEN "${TELEGRAM_BOT_TOKEN:-}" "$APP_DIR/backend/.env"
+          upsert_env TELEGRAM_DEFAULT_CHAT_ID "${TELEGRAM_DEFAULT_CHAT_ID:-}" "$APP_DIR/backend/.env"
 
           cd "$APP_DIR/backend"
           npm ci --omit=dev
@@ -118,4 +143,13 @@ jobs:
           systemctl reload nginx
 
           curl -s -o /dev/null -w "health check /api/v1/auth/me -> %{http_code}\\n" http://127.0.0.1:5050/api/v1/auth/me || true
+          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_DEFAULT_CHAT_ID:-}" ]; then
+            curl -s -o /dev/null -w "telegram notify -> %{http_code}\\n" \
+              -X POST http://127.0.0.1:5050/api/v1/notify/telegram \
+              -H "Content-Type: application/json" \
+              -d "{\"chatId\":\"${TELEGRAM_DEFAULT_CHAT_ID}\",\"text\":\"Deploy OK: gps.duwiarsana.id\"}" \
+              || true
+          else
+            echo "telegram notify -> skipped (missing TELEGRAM_BOT_TOKEN/TELEGRAM_DEFAULT_CHAT_ID)"
+          fi
           SSH
