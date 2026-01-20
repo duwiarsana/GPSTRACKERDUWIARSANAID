@@ -29,20 +29,38 @@ jobs:
       - name: Validate VPS SSH key secret present
         env:
           VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_SSH_PRIVATE_KEY_B64: ${{ secrets.VPS_SSH_PRIVATE_KEY_B64 }}
         run: |
-          echo "VPS_SSH_PRIVATE_KEY length: ${#VPS_SSH_PRIVATE_KEY}"
-          if [ "${#VPS_SSH_PRIVATE_KEY}" -lt 100 ]; then
-            echo "VPS_SSH_PRIVATE_KEY secret is missing/empty (or too short). Ensure it is set as a Repository secret named exactly VPS_SSH_PRIVATE_KEY."
-            exit 1
+          if [ -n "$VPS_SSH_PRIVATE_KEY_B64" ]; then
+            echo "VPS_SSH_PRIVATE_KEY_B64 length: ${#VPS_SSH_PRIVATE_KEY_B64}"
+            if [ "${#VPS_SSH_PRIVATE_KEY_B64}" -lt 100 ]; then
+              echo "VPS_SSH_PRIVATE_KEY_B64 secret is too short; expected base64 of an OpenSSH private key."
+              exit 1
+            fi
+          else
+            echo "VPS_SSH_PRIVATE_KEY length: ${#VPS_SSH_PRIVATE_KEY}"
+            if [ "${#VPS_SSH_PRIVATE_KEY}" -lt 100 ]; then
+              echo "VPS_SSH_PRIVATE_KEY secret is missing/empty (or too short). Ensure it is set as a Repository secret named exactly VPS_SSH_PRIVATE_KEY."
+              exit 1
+            fi
+            if ! printf '%s' "$VPS_SSH_PRIVATE_KEY" | grep -q "BEGIN OPENSSH PRIVATE KEY"; then
+              echo "VPS_SSH_PRIVATE_KEY does not look like a private key (missing BEGIN OPENSSH PRIVATE KEY). Did you paste the .pub by mistake?"
+              exit 1
+            fi
           fi
 
       - name: Write SSH key
         env:
           VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_SSH_PRIVATE_KEY_B64: ${{ secrets.VPS_SSH_PRIVATE_KEY_B64 }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s' "$VPS_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+          if [ -n "$VPS_SSH_PRIVATE_KEY_B64" ]; then
+            printf '%s' "$VPS_SSH_PRIVATE_KEY_B64" | tr -d '\r\n' | base64 -d > ~/.ssh/id_ed25519
+          else
+            printf '%s' "$VPS_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+          fi
           chmod 600 ~/.ssh/id_ed25519
           ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
 
