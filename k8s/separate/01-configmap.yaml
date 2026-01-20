@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpstracker-config
+  namespace: gpstracker
+data:
+  NODE_ENV: "production"
+  PORT: "5050"
+  MONGODB_URI: "mongodb://mongo:27017/gpstracker"
+  JWT_EXPIRE: "30d"
+  JWT_COOKIE_EXPIRE: "7"
+  CORS_ORIGIN: "*"
+  DEVICE_INACTIVE_TIMEOUT_MS: "40000"
+  MQTT_BROKER_URL: "mqtt://202.74.74.42:1883"
+  MQTT_TOPIC_PREFIX: "gpstracker/device/"
+  NODE_OPTIONS: "--max-old-space-size=1024"
+  TELEGRAM_COOLDOWN_MINUTES: "10"
+  TELEGRAM_DWELL_EXIT_SECONDS: "30"
+  TELEGRAM_DEVICE_INACTIVE_COOLDOWN_MINUTES: "10"
+  LOG_LEVEL: "info"
+  REACT_APP_API_URL: "/api/v1"

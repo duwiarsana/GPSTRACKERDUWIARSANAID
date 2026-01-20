@@ -1,0 +1,22 @@
+.leaflet-tooltip.glass-tooltip {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.leaflet-tooltip.glass-tooltip:before,
+.leaflet-tooltip.glass-tooltip:after {
+  display: none;
+}
+
+ .map-tooltip-address {
+   max-width: 320px;
+   display: -webkit-box;
+   -webkit-box-orient: vertical;
+   -webkit-line-clamp: 2;
+   line-clamp: 2;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: normal;
+ }

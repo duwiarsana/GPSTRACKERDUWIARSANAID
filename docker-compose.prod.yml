@@ -1,0 +1,65 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: gpstracker-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=gpstracker
+      - MYSQL_USER=gpstracker
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-gpstracker}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-gpstracker}
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: gpstracker-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=5050
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=gpstracker
+      - MYSQL_USER=gpstracker
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-gpstracker}
+      - JWT_SECRET=CHANGE_ME
+      - JWT_EXPIRE=30d
+      - JWT_COOKIE_EXPIRE=7
+      - CORS_ORIGIN=*
+      - DEVICE_INACTIVE_TIMEOUT_MS=40000
+      # Optional MQTT: set to a reachable broker to enable
+      - MQTT_BROKER_URL=mqtt://202.74.74.42:1883
+      - MQTT_TOPIC_PREFIX=gpstracker/device/
+      - NODE_OPTIONS=--max-old-space-size=1024
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_DEFAULT_CHAT_ID=${TELEGRAM_DEFAULT_CHAT_ID:-}
+      - TELEGRAM_COOLDOWN_MINUTES=10
+      - TELEGRAM_DWELL_EXIT_SECONDS=30
+      - TELEGRAM_DEVICE_INACTIVE_COOLDOWN_MINUTES=10
+    depends_on:
+      - mysql
+    ports:
+      - "5050:5050"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5050/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: gpstracker-frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  mysql-data:

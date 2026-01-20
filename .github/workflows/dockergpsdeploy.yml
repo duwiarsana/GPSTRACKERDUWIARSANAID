@@ -1,0 +1,231 @@
+name: Build and Push Docker Images - GPS Tracker MQTT
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DOCKER_HUB_USERNAME: duwiarsana
+  DOCKER_HUB_REPOSITORY_UNIFIED: duwiarsana/gpsmqtt
+  DOCKER_HUB_REPOSITORY_BACKEND: duwiarsana/gpsmqtt-backend
+  DOCKER_HUB_REPOSITORY_FRONTEND: duwiarsana/gpsmqtt-frontend
+  REGISTRY: docker.io
+
+jobs:
+  build-and-push-unified:
+    name: Build Unified Image (Frontend + Backend)
+    runs-on: ubuntu-latest
+    environment: docker
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Extract Docker metadata (Unified)
+        id: meta-unified
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_HUB_REPOSITORY_UNIFIED }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: duwiarsana
+          password: ${{ secrets.DOCKERTOKEN }}
+
+      - name: Build Unified Image (PR - no push)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          platforms: linux/amd64
+          tags: ${{ env.DOCKER_HUB_REPOSITORY_UNIFIED }}:pr
+          build-args: |
+            REACT_APP_API_URL=/api/v1
+          
+      - name: Build and Push Unified Image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-unified.outputs.tags }}
+          labels: ${{ steps.meta-unified.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.DOCKER_HUB_REPOSITORY_UNIFIED }}:buildcache
+          cache-to: type=registry,ref=${{ env.DOCKER_HUB_REPOSITORY_UNIFIED }}:buildcache,mode=max
+          build-args: |
+            REACT_APP_API_URL=/api/v1
+          provenance: false
+
+  build-and-push-backend:
+    name: Build Backend Image
+    runs-on: ubuntu-latest
+    environment: docker
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Extract Docker metadata (Backend)
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_HUB_REPOSITORY_BACKEND }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKERTOKEN }}
+
+      - name: Build Backend Image (PR - no push)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          platforms: linux/amd64
+          tags: ${{ env.DOCKER_HUB_REPOSITORY_BACKEND }}:pr
+          
+      - name: Build and Push Backend Image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.DOCKER_HUB_REPOSITORY_BACKEND }}:buildcache
+          cache-to: type=registry,ref=${{ env.DOCKER_HUB_REPOSITORY_BACKEND }}:buildcache,mode=max
+          provenance: false
+
+  build-and-push-frontend:
+    name: Build Frontend Image
+    runs-on: ubuntu-latest
+    environment: docker
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Extract Docker metadata (Frontend)
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_HUB_REPOSITORY_FRONTEND }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKERTOKEN }}
+
+      - name: Build Frontend Image (PR - no push)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: false
+          platforms: linux/amd64
+          tags: ${{ env.DOCKER_HUB_REPOSITORY_FRONTEND }}:pr
+          build-args: |
+            REACT_APP_API_URL=/api/v1
+          
+      - name: Build and Push Frontend Image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.DOCKER_HUB_REPOSITORY_FRONTEND }}:buildcache
+          cache-to: type=registry,ref=${{ env.DOCKER_HUB_REPOSITORY_FRONTEND }}:buildcache,mode=max
+          build-args: |
+            REACT_APP_API_URL=/api/v1
+          provenance: false
+
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-and-push-unified, build-and-push-backend, build-and-push-frontend]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Docker Images Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Images Built:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Unified**: \`${{ env.DOCKER_HUB_REPOSITORY_UNIFIED }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend**: \`${{ env.DOCKER_HUB_REPOSITORY_BACKEND }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend**: \`${{ env.DOCKER_HUB_REPOSITORY_FRONTEND }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Options:" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Unified Deployment** (Recommended for simple setup):" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   kubectl apply -f k8s/" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Separate Deployment** (Recommended for scaling):" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   kubectl apply -f k8s/separate/" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY

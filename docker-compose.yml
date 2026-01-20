@@ -1,0 +1,94 @@
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8
+    container_name: gpstracker-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: gpstracker
+      MYSQL_USER: gpstracker
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-gpstracker}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-gpstracker}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - gpstracker-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-gpstracker}"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  # Unified GPS Tracker Application (Frontend + Backend)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: /api/v1
+    container_name: gpstracker-app
+    restart: unless-stopped
+    environment:
+      # Node.js Backend Configuration
+      NODE_ENV: production
+      PORT: 5050
+      
+      # Database
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: gpstracker
+      MYSQL_USER: gpstracker
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-gpstracker}
+      
+      # JWT Authentication
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_IN_PRODUCTION}
+      JWT_EXPIRE: 30d
+      JWT_COOKIE_EXPIRE: 7
+      
+      # CORS
+      CORS_ORIGIN: "*"
+      
+      # Device Settings
+      DEVICE_INACTIVE_TIMEOUT_MS: 40000
+      
+      # MQTT Configuration
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://202.74.74.42:1883}
+      MQTT_TOPIC_PREFIX: gpstracker/device/
+      
+      # Node.js Performance
+      NODE_OPTIONS: --max-old-space-size=1024
+      
+      # Telegram Bot (Optional)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_DEFAULT_CHAT_ID: ${TELEGRAM_DEFAULT_CHAT_ID:-}
+      TELEGRAM_COOLDOWN_MINUTES: 10
+      TELEGRAM_DWELL_EXIT_SECONDS: 30
+      TELEGRAM_DEVICE_INACTIVE_COOLDOWN_MINUTES: 10
+      
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "80:80"      # Frontend (Nginx) + API proxy
+      - "5050:5050"  # Direct backend access (optional, can be removed)
+    networks:
+      - gpstracker-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  gpstracker-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local

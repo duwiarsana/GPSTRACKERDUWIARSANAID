@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: gpstracker-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=gpstracker
+      - MYSQL_USER=gpstracker
+      - MYSQL_PASSWORD=gpstracker
+      - MYSQL_ROOT_PASSWORD=gpstracker
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  backend:
+    image: node:18
+    container_name: gpstracker-backend
+    working_dir: /app/backend
+    volumes:
+      - ./backend:/app/backend
+    environment:
+      - NODE_ENV=development
+      - PORT=5050
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=gpstracker
+      - MYSQL_USER=gpstracker
+      - MYSQL_PASSWORD=gpstracker
+      - JWT_SECRET=devsupersecret
+      - JWT_EXPIRE=30d
+      - JWT_COOKIE_EXPIRE=7
+      - CORS_ORIGIN=*
+      - DEVICE_INACTIVE_TIMEOUT_MS=40000
+      # Optional MQTT (disabled in dev by default; set MQTT_BROKER_URL to enable)
+      - MQTT_BROKER_URL=
+      - MQTT_TOPIC_PREFIX=gpstracker/device/
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "5050:5050"
+    depends_on:
+      - mysql
+
+  frontend:
+    image: node:18
+    container_name: gpstracker-frontend
+    working_dir: /app/frontend
+    volumes:
+      - ./frontend:/app/frontend
+    environment:
+      # Browser hits backend via host's port 5050
+      - REACT_APP_API_URL=http://localhost:5050/api/v1
+      - CHOKIDAR_USEPOLLING=true
+    command: sh -c "npm install && npm start"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mysql-data:

@@ -1,0 +1,10 @@
+# Example overrides for development or environment-specific settings
+# Copy to docker-compose.override.yml and adjust values as needed.
+
+services:
+  backend:
+    environment:
+      - MQTT_BROKER_URL=mqtt://202.74.74.42:1883
+      - NODE_OPTIONS=--max-old-space-size=1024
+      - LOG_LEVEL=info
+    restart: unless-stopped

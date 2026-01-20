@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: gpstracker
+
+resources:
+  - 00-namespace.yaml
+  - 01-configmap.yaml
+  - 02-secret.yaml
+  - 03-mongodb-pvc.yaml
+  - 04-mongodb-deployment.yaml
+  - 05-mongodb-service.yaml
+  - 06-app-deployment.yaml
+  - 07-app-service.yaml
+  - 08-ingress.yaml
+  - 09-hpa.yaml
+
+commonLabels:
+  app.kubernetes.io/name: gps-tracker-mqtt
+  app.kubernetes.io/managed-by: kustomize
+
+images:
+  - name: duwiarsana/gpsmqtt
+    newTag: latest
