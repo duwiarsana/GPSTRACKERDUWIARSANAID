@@ -1,0 +1,85 @@
+---
+name: "Deploy to VPS (gps.duwiarsana.id)"
+
+'on':
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps-gpstracker
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      VPS_HOST: "76.13.19.250"
+      VPS_USER: "root"
+      APP_DIR: "/root/apps/gpstracker"
+      WEB_DIR: "/var/www/gps"
+      PM2_NAME: "gpstracker-backend"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync source to VPS
+        run: |
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude 'node_modules/' \
+            --exclude 'backend/node_modules/' \
+            --exclude 'frontend/node_modules/' \
+            --exclude 'backend/logs/' \
+            --exclude 'backend/.env' \
+            --exclude 'frontend/.env' \
+            --exclude '.env' \
+            --exclude 'frontend/build/' \
+            ./ "$VPS_USER@$VPS_HOST:$APP_DIR/"
+
+      - name: Install, build, and restart on VPS
+        run: |
+          ssh "$VPS_USER@$VPS_HOST" <<SSH
+          set -euo pipefail
+
+          APP_DIR="$APP_DIR"
+          WEB_DIR="$WEB_DIR"
+          PM2_NAME="$PM2_NAME"
+
+          test -f "$APP_DIR/backend/.env" || (echo "Missing $APP_DIR/backend/.env" && exit 1)
+          test -f "$APP_DIR/frontend/.env" || (echo "Missing $APP_DIR/frontend/.env" && exit 1)
+
+          cd "$APP_DIR/backend"
+          npm ci --omit=dev
+          if pm2 describe "$PM2_NAME" >/dev/null 2>&1; then
+            pm2 restart "$PM2_NAME" --update-env
+          else
+            pm2 start src/server.js --name "$PM2_NAME"
+          fi
+          pm2 save
+
+          cd "$APP_DIR/frontend"
+          npm ci
+          npm run build
+
+          rsync -a --delete --chown=www-data:www-data --chmod=D755,F644 \
+            "$APP_DIR/frontend/build/" "$WEB_DIR/"
+
+          nginx -t
+          systemctl reload nginx
+
+          curl -s -o /dev/null -w "health check /api/v1/auth/me -> %{http_code}\\n" http://127.0.0.1:5050/api/v1/auth/me || true
+          SSH
