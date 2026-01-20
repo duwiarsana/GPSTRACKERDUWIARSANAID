@@ -71,6 +71,8 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" <<SSH
           set -euo pipefail
 
+          export PATH=/usr/bin:$PATH
+
           APP_DIR="$APP_DIR"
           WEB_DIR="$WEB_DIR"
           PM2_NAME="$PM2_NAME"
