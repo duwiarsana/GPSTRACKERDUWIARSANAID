@@ -605,7 +605,7 @@ const DashboardPage: React.FC = () => {
         {/* Footer copyright */}
         <Box sx={{ position: 'absolute', bottom: 8, left: 16, opacity: 0.8 }}>
           <Typography variant="caption" color="text.secondary">
-            © dwuiarsana {new Date().getFullYear()}
+            © duwiarsana {new Date().getFullYear()}
           </Typography>
         </Box>
       </Box>

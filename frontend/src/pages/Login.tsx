@@ -75,7 +75,7 @@ const LoginPage: React.FC = () => {
         </Stack>
       </Paper>
       <Box sx={{ position: 'absolute', bottom: 12, left: 16, opacity: 0.8 }}>
-        <Typography variant="caption" color="text.secondary">© dwuiarsana {new Date().getFullYear()}</Typography>
+        <Typography variant="caption" color="text.secondary">© duwiarsana {new Date().getFullYear()}</Typography>
       </Box>
     </Box>
   );
