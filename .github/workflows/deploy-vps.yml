@@ -44,7 +44,7 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s' "$VPS_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keygen -lf ~/.ssh/id_ed25519 >/dev/null
+          ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
 
       - name: Add VPS to known_hosts
         run: |
