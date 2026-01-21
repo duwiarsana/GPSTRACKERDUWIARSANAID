@@ -599,7 +599,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                 secondary={
                   <Stack spacing={0.25} sx={{ mt: 0.25 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12, lineHeight: 1.25 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, lineHeight: 1.2 }}>
                         Last seen {lastSeen}
                       </Typography>
                       <Stack direction="row" spacing={1.25} alignItems="center">
