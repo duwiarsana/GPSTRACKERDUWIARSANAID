@@ -33,7 +33,7 @@ interface MapViewProps {
   forceTick?: number;
   activeId?: string;
   allowCacheLatest?: boolean;
-  geofence?: any | null;
+  geofence?: any[] | any | null;
 }
 
 const PersistView: React.FC<{ onReady?: (map: L.Map) => void }> = ({ onReady }) => {
@@ -162,33 +162,38 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
     },
     [addressCache, addressKeyFor, addressLoading],
   );
-  const pointInPolygon = useCallback((lng: number, lat: number, fence: any | null): boolean => {
+  const pointInPolygon = useCallback((lng: number, lat: number, fence: any[] | any | null): boolean => {
     if (!fence) return true; // treat as inside if no geofence
-    try {
-      const polyRings: number[][][] = (() => {
-        if (fence.type === 'Polygon' && Array.isArray(fence.coordinates)) return fence.coordinates as number[][][];
-        if (fence.type === 'MultiPolygon' && Array.isArray(fence.coordinates)) {
-          // flatten first polygon ring set
-          return (fence.coordinates as number[][][][])[0] as unknown as number[][][];
+    if (Array.isArray(fence) && fence.length === 0) return true;
+    const list = Array.isArray(fence) ? fence : [fence];
+    const insideOne = (f: any): boolean => {
+      try {
+        const polyRings: number[][][] = (() => {
+          if (f?.type === 'Polygon' && Array.isArray(f.coordinates)) return f.coordinates as number[][][];
+          if (f?.type === 'MultiPolygon' && Array.isArray(f.coordinates)) {
+            return (f.coordinates as number[][][][])[0] as unknown as number[][][];
+          }
+          if (Array.isArray(f?.geometry?.coordinates)) return f.geometry.coordinates as number[][][];
+          return [] as number[][][];
+        })();
+        if (!polyRings.length) return false;
+        const ring = polyRings[0] as number[][];
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          const xi = ring[i][0], yi = ring[i][1];
+          const xj = ring[j][0], yj = ring[j][1];
+          const intersect = ((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi + 1e-12) + xi);
+          if (intersect) inside = !inside;
         }
-        if (Array.isArray(fence?.geometry?.coordinates)) return fence.geometry.coordinates as number[][][];
-        return [] as number[][][];
-      })();
-      if (!polyRings.length) return true;
-      // Use only outer ring for inclusion test
-      const ring = polyRings[0] as number[][];
-      // Ray casting algorithm
-      let inside = false;
-      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-        const xi = ring[i][0], yi = ring[i][1];
-        const xj = ring[j][0], yj = ring[j][1];
-        const intersect = ((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi + 1e-12) + xi);
-        if (intersect) inside = !inside;
+        return inside;
+      } catch {
+        return false;
       }
-      return inside;
-    } catch {
-      return true;
+    };
+    for (const g of list) {
+      if (insideOne(g)) return true;
     }
+    return false;
   }, []);
   const colorFor = useCallback((lng: number, lat: number, active: boolean): string => {
     if (!active) return '#dc2626'; // red for inactive

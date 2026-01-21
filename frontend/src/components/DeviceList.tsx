@@ -118,7 +118,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
   // Geofence editor state
   const [geoOpen, setGeoOpen] = useState(false);
   const [geoDevice, setGeoDevice] = useState<Device | null>(null);
-  const [geoPolygon, setGeoPolygon] = useState<any | null>(null);
+  const [geoPolygons, setGeoPolygons] = useState<any[] | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoSaving, setGeoSaving] = useState(false);
 
@@ -153,18 +153,28 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
   };
 
   // Simple ray-casting point-in-polygon for GeoJSON Polygon (first ring)
-  const isPointInsideGeofence = (coords?: [number, number], polygon?: any): boolean | null => {
-    if (!coords || !polygon || polygon.type !== 'Polygon' || !Array.isArray(polygon.coordinates) || !polygon.coordinates[0]) return null;
+  const isPointInsideGeofence = (coords?: [number, number], fences?: any | any[]): boolean | null => {
+    if (!coords) return null;
+    const list = Array.isArray(fences) ? fences : (fences ? [fences] : []);
+    if (list.length === 0) return null;
     const [lng, lat] = coords;
-    const ring: number[][] = polygon.coordinates[0]; // [[lng,lat], ...]
-    let inside = false;
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-      const xi = ring[i][0], yi = ring[i][1];
-      const xj = ring[j][0], yj = ring[j][1];
-      const intersect = ((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi + 0.0) + xi);
-      if (intersect) inside = !inside;
+    const insideOne = (polygon: any): boolean | null => {
+      if (!polygon || polygon.type !== 'Polygon' || !Array.isArray(polygon.coordinates) || !polygon.coordinates[0]) return null;
+      const ring: number[][] = polygon.coordinates[0]; // [[lng,lat], ...]
+      let inside = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const xi = ring[i][0], yi = ring[i][1];
+        const xj = ring[j][0], yj = ring[j][1];
+        const intersect = ((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi + 0.0) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    };
+    for (const g of list) {
+      const r = insideOne(g);
+      if (r === true) return true;
     }
-    return inside;
+    return false;
   };
 
   const handleOpenEdit = (device: Device) => {
@@ -222,12 +232,12 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
     setGeoDevice(device);
     setGeoOpen(true);
     setGeoLoading(true);
-    setGeoPolygon(null);
+    setGeoPolygons(null);
     try {
       const id = device.id || device._id;
       if (id) {
         const data = await apiService.getDeviceGeofence(id);
-        setGeoPolygon(data || null);
+        setGeoPolygons(data || null);
       }
     } catch (e) {
       // ignore fetch error; user can draw new polygon
@@ -242,7 +252,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
     try {
       const id = geoDevice.id || geoDevice._id;
       if (id) {
-        await apiService.updateDeviceGeofence(id, geoPolygon || null);
+        await apiService.updateDeviceGeofence(id, geoPolygons || null);
         onRefresh && onRefresh();
       }
       setGeoOpen(false);
@@ -713,14 +723,14 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
             </Typography>
             <Stack direction="row" spacing={1}>
               <Button onClick={() => setGeoOpen(false)} disabled={geoSaving}>Cancel</Button>
-              <Button color="warning" variant="outlined" onClick={() => setGeoPolygon(null)} disabled={geoSaving}>Clear</Button>
+              <Button color="warning" variant="outlined" onClick={() => setGeoPolygons(null)} disabled={geoSaving}>Clear</Button>
               <Button variant="contained" onClick={handleSaveGeofence} disabled={geoSaving}>{geoSaving ? 'Saving…' : 'Save'}</Button>
             </Stack>
           </Box>
           {/* Full-bleed map */}
           <Box sx={{ width: '100%', height: '100vh' }}>
             {!geoLoading && (
-              <GeofenceEditor polygon={geoPolygon} onChange={setGeoPolygon} />
+              <GeofenceEditor polygons={geoPolygons} onChange={setGeoPolygons} />
             )}
             {geoLoading && (
               <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -201,6 +201,26 @@ exports.updateDevice = asyncHandler(async (req, res, next) => {
   });
 });
 
+function isGeoJsonPolygon(value) {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    value.type === 'Polygon' &&
+    Array.isArray(value.coordinates) &&
+    Array.isArray(value.coordinates[0])
+  );
+}
+
+function normalizeGeofence(value) {
+  if (value == null) return null;
+  if (Array.isArray(value)) {
+    const polys = value.filter(isGeoJsonPolygon);
+    return polys.length > 0 ? polys : null;
+  }
+  if (isGeoJsonPolygon(value)) return [value];
+  return null;
+}
+
 // @desc    Get device geofence
 // @route   GET /api/v1/devices/:id/geofence
 // @access  Private
@@ -212,10 +232,10 @@ exports.getDeviceGeofence = asyncHandler(async (req, res, next) => {
   if (device.userId !== req.user.id && req.user.role !== 'admin') {
     return next(new ErrorResponse(`User ${req.user.id} is not authorized to access this device`, 403));
   }
-  res.status(200).json({ success: true, data: device.geofence || null });
+  res.status(200).json({ success: true, data: normalizeGeofence(device.geofence) });
 });
 
-// @desc    Update device geofence (GeoJSON Polygon). Pass null to clear.
+// @desc    Update device geofence (GeoJSON Polygon or array of Polygons). Pass null to clear.
 // @route   PUT /api/v1/devices/:id/geofence
 // @access  Private
 exports.updateDeviceGeofence = asyncHandler(async (req, res, next) => {
@@ -236,17 +256,25 @@ exports.updateDeviceGeofence = asyncHandler(async (req, res, next) => {
   if (body === null || (typeof body === 'object' && body && body.geofence === null)) {
     nextGeofence = null;
   } else {
-    // Accept either raw Polygon or { geofence: Polygon }
-    const polygon = (body && body.type === 'Polygon') ? body : body?.geofence;
-    if (!polygon || polygon.type !== 'Polygon' || !Array.isArray(polygon.coordinates)) {
-      return next(new ErrorResponse('Invalid geofence payload. Expected GeoJSON Polygon.', 400));
+    const candidate = (() => {
+      if (Array.isArray(body)) return body;
+      if (typeof body === 'object' && body) {
+        if (body.geofences !== undefined) return body.geofences;
+        if (body.geofence !== undefined) return body.geofence;
+      }
+      return body;
+    })();
+
+    const normalized = normalizeGeofence(candidate);
+    if (!normalized) {
+      return next(new ErrorResponse('Invalid geofence payload. Expected GeoJSON Polygon or array of Polygons.', 400));
     }
-    nextGeofence = polygon;
+    nextGeofence = normalized;
   }
 
   await Device.update({ geofence: nextGeofence }, { where: { _id: req.params.id } });
   const updated = await Device.findByPk(req.params.id, { attributes: ['geofence'] });
-  res.status(200).json({ success: true, data: updated?.geofence || null });
+  res.status(200).json({ success: true, data: normalizeGeofence(updated?.geofence) });
 });
 
 // @desc    Delete device

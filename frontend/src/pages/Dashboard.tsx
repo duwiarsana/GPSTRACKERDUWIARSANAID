@@ -45,7 +45,7 @@ const DashboardPage: React.FC = () => {
   const stats = useAppSelector(selectDeviceStats);
   const locationsState = useAppSelector(selectDeviceLocationsState);
   const deviceError = useAppSelector(selectDeviceError);
-  const [geofence, setGeofence] = useState<any | null>(null);
+  const [geofence, setGeofence] = useState<any[] | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>(undefined);
   const [panelsVisible, setPanelsVisible] = useState<boolean>(true);
   const [latestOnly, setLatestOnly] = useState<boolean>(true);

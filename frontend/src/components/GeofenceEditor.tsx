@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Box } from '@mui/material';
 import { MapContainer, TileLayer, FeatureGroup, useMap } from 'react-leaflet';
 import L, { LatLngExpression, LeafletEvent } from 'leaflet';
@@ -14,38 +14,35 @@ export type GeoJsonPolygon = {
 export interface GeofenceEditorProps {
   center?: LatLngExpression;
   zoom?: number;
-  // existing polygon to preload
-  polygon?: GeoJsonPolygon | null;
-  onChange: (polygon: GeoJsonPolygon | null) => void;
+  // existing polygons to preload
+  polygons?: GeoJsonPolygon[] | null;
+  onChange: (polygons: GeoJsonPolygon[] | null) => void;
 }
 
 // Helper component to setup Leaflet.Draw controls
-const DrawControls: React.FC<{ onChange: (polygon: GeoJsonPolygon | null) => void; initial?: GeoJsonPolygon | null }>
+const DrawControls: React.FC<{ onChange: (polygons: GeoJsonPolygon[] | null) => void; initial?: GeoJsonPolygon[] | null }>
   = ({ onChange, initial }) => {
   const map = useMap();
   const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
-  const drawnLayerRef = useRef<L.Polygon | null>(null);
+  const skipNextSyncRef = useRef(false);
+
+  const emitAll = useCallback(() => {
+    try {
+      const layers = featureGroupRef.current.getLayers();
+      const polys = layers
+        .filter((l) => l instanceof L.Polygon)
+        .map((l) => layerToPolygon(l as L.Polygon));
+      skipNextSyncRef.current = true;
+      onChange(polys.length > 0 ? polys : null);
+    } catch {
+      skipNextSyncRef.current = true;
+      onChange(null);
+    }
+  }, [onChange]);
 
   useEffect(() => {
-    map.addLayer(featureGroupRef.current);
-
-    // Preload existing polygon or clear if none
-    if (initial && initial.type === 'Polygon' && Array.isArray(initial.coordinates)) {
-      try {
-        const latlngs = initial.coordinates[0].map(([lng, lat]) => [lat, lng]) as [number, number][];
-        const poly = L.polygon(latlngs, { color: '#2563eb' });
-        featureGroupRef.current.addLayer(poly);
-        drawnLayerRef.current = poly;
-        map.fitBounds(poly.getBounds(), { padding: [20, 20] });
-      } catch {}
-    } else {
-      try {
-        featureGroupRef.current.clearLayers();
-        drawnLayerRef.current = null;
-        // ensure parent knows it's cleared
-        // onChange(null) intentionally not called here to avoid infinite loops; parent already set null
-      } catch {}
-    }
+    const fg = featureGroupRef.current;
+    map.addLayer(fg);
 
     const drawControl = new (L as any).Control.Draw({
       position: 'topright',
@@ -62,7 +59,7 @@ const DrawControls: React.FC<{ onChange: (polygon: GeoJsonPolygon | null) => voi
         },
       },
       edit: {
-        featureGroup: featureGroupRef.current,
+        featureGroup: fg,
         edit: true,
         remove: true,
       },
@@ -71,21 +68,17 @@ const DrawControls: React.FC<{ onChange: (polygon: GeoJsonPolygon | null) => voi
     map.addControl(drawControl);
 
     const handleCreated = (e: LeafletEvent & { layer: L.Layer }) => {
-      // Only allow one polygon: clear previous
-      featureGroupRef.current.clearLayers();
       const layer = e.layer as L.Polygon;
-      featureGroupRef.current.addLayer(layer);
-      drawnLayerRef.current = layer;
-      onChange(layerToPolygon(layer));
+      fg.addLayer(layer);
+      emitAll();
     };
 
     const handleEdited = () => {
-      if (drawnLayerRef.current) onChange(layerToPolygon(drawnLayerRef.current));
+      emitAll();
     };
 
     const handleDeleted = () => {
-      drawnLayerRef.current = null;
-      onChange(null);
+      emitAll();
     };
 
     const DrawNS: any = (L as any).Draw;
@@ -99,9 +92,38 @@ const DrawControls: React.FC<{ onChange: (polygon: GeoJsonPolygon | null) => voi
       map.off(DrawNSCleanup.Event.EDITED as any, handleEdited);
       map.off(DrawNSCleanup.Event.DELETED as any, handleDeleted);
       map.removeControl(drawControl);
-      map.removeLayer(featureGroupRef.current);
+      map.removeLayer(fg);
     };
-  }, [map, onChange, initial]);
+  }, [map, emitAll]);
+
+  useEffect(() => {
+    const fg = featureGroupRef.current;
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
+    }
+    // Preload existing polygons or clear if none
+    if (Array.isArray(initial) && initial.length > 0) {
+      try {
+        fg.clearLayers();
+        const bounds = L.latLngBounds([]);
+        for (const p of initial) {
+          if (!p || p.type !== 'Polygon' || !Array.isArray(p.coordinates) || !Array.isArray(p.coordinates[0])) continue;
+          const latlngs = p.coordinates[0].map(([lng, lat]) => [lat, lng]) as [number, number][];
+          const poly = L.polygon(latlngs, { color: '#2563eb' });
+          fg.addLayer(poly);
+          try {
+            bounds.extend(poly.getBounds());
+          } catch {}
+        }
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20] });
+      } catch {}
+    } else {
+      try {
+        fg.clearLayers();
+      } catch {}
+    }
+  }, [map, initial]);
 
   return null;
 };
@@ -116,8 +138,8 @@ function layerToPolygon(layer: L.Polygon): GeoJsonPolygon {
   return { type: 'Polygon', coordinates: [coords] };
 }
 
-const GeofenceEditor: React.FC<GeofenceEditorProps> = ({ center = [ -6.2, 106.8 ], zoom = 12, polygon, onChange }) => {
-  const polygonRef = useRef<GeoJsonPolygon | null>(polygon || null);
+const GeofenceEditor: React.FC<GeofenceEditorProps> = ({ center = [ -6.2, 106.8 ], zoom = 12, polygons, onChange }) => {
+  const polygonsRef = useRef<GeoJsonPolygon[] | null>(polygons || null);
 
   return (
     <Box sx={{
@@ -130,10 +152,10 @@ const GeofenceEditor: React.FC<GeofenceEditorProps> = ({ center = [ -6.2, 106.8 
       <MapContainer center={center} zoom={zoom} style={{ width: '100%', height: '100%' }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <FeatureGroup />
-        <DrawControls onChange={(p) => { polygonRef.current = p; onChange(p); }} initial={polygon || null} />
+        <DrawControls onChange={(p) => { polygonsRef.current = p; onChange(p); }} initial={polygons || null} />
       </MapContainer>
       {/* Imperative save through parent dialog actions: parent will read polygonRef.current via callback */}
-      <Box sx={{ display: 'none' }} data-geofence-json={JSON.stringify(polygonRef.current || null)} />
+      <Box sx={{ display: 'none' }} data-geofence-json={JSON.stringify(polygonsRef.current || null)} />
     </Box>
   );
 };

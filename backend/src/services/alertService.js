@@ -156,13 +156,36 @@ function formatMsg({ deviceName, deviceId, event, lat, lng, address }) {
   ].filter(Boolean).join('\n');
 }
 
+function isGeoJsonPolygon(value) {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    value.type === 'Polygon' &&
+    Array.isArray(value.coordinates) &&
+    Array.isArray(value.coordinates[0])
+  );
+}
+
+function normalizeGeofence(value) {
+  if (value == null) return [];
+  if (Array.isArray(value)) return value.filter(isGeoJsonPolygon);
+  if (isGeoJsonPolygon(value)) return [value];
+  return [];
+}
+
 async function handleGeofence({ device, lng, lat }) {
   try {
     const deviceId = device.deviceId;
-    const polygon = device?.geofence?.coordinates;
-    if (!polygon) return; // no geofence set
+    const geofences = normalizeGeofence(device?.geofence);
+    if (geofences.length === 0) return; // no geofence set
 
-    const inside = !!isPointInsidePolygon(polygon, [lng, lat]);
+    const inside = geofences.some((g) => {
+      try {
+        return !!isPointInsidePolygon(g.coordinates, [lng, lat]);
+      } catch {
+        return false;
+      }
+    });
     const prev = lastState.get(deviceId) || { inside: null, lastAlertAt: 0, lastEvent: null };
 
     // Initialize state without alert on first observation

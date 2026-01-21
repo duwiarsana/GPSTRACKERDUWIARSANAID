@@ -133,13 +133,17 @@ class ApiService {
   }
 
   // Geofence endpoints
-  async getDeviceGeofence(deviceId: string): Promise<any | null> {
+  async getDeviceGeofence(deviceId: string): Promise<any[] | null> {
     const { data } = await this.api.get(`/devices/${deviceId}/geofence`);
     return data.data || null;
   }
 
-  async updateDeviceGeofence(deviceId: string, polygonGeoJson: any | null): Promise<any | null> {
-    const body = polygonGeoJson === null ? { geofence: null } : polygonGeoJson;
+  async updateDeviceGeofence(deviceId: string, geofences: any[] | any | null): Promise<any[] | null> {
+    const body = geofences === null
+      ? { geofence: null }
+      : Array.isArray(geofences)
+        ? { geofences }
+        : geofences;
     const { data } = await this.api.put(`/devices/${deviceId}/geofence`, body);
     return data.data || null;
   }
