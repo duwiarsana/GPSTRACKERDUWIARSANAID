@@ -20,6 +20,7 @@ export interface Device {
     timestamp: string;
     speed?: number;
     accuracy?: number;
+    altitude?: number;
     battery?: {
       level: number;
       isCharging: boolean;
@@ -43,6 +44,7 @@ export interface Location {
   location: LocationPoint;
   speed?: number;
   accuracy?: number;
+  altitude?: number;
   battery?: {
     level: number;
     isCharging: boolean;

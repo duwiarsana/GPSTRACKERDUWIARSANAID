@@ -581,12 +581,12 @@ exports.simulateLocationByDeviceId = asyncHandler(async (req, res, next) => {
   if (!device) {
     return next(new ErrorResponse(`Device not found with deviceId of ${deviceId}`, 404));
   }
-  const { latitude, longitude, speed, accuracy, battery, satellites, timestamp, metadata } = req.body || {};
-  try { console.log('[simulateLocation] rx', { deviceId, latitude, longitude, speed, accuracy, satellites, battery }); } catch {}
+  const { latitude, longitude, speed, accuracy, battery, satellites, altitude, timestamp, metadata } = req.body || {};
+  try { console.log('[simulateLocation] rx', { deviceId, latitude, longitude, speed, accuracy, altitude, satellites, battery }); } catch {}
   if (typeof latitude !== 'number' || typeof longitude !== 'number') {
     return next(new ErrorResponse('latitude and longitude are required numbers', 400));
   }
-  const payload = { latitude, longitude, speed, accuracy, battery, satellites, timestamp, metadata };
+  const payload = { latitude, longitude, speed, accuracy, battery, satellites, altitude, timestamp, metadata };
   await mqttService.updateDeviceLocation(deviceId, payload);
   await mqttService.saveLocationHistory(deviceId, payload);
   res.status(200).json({ success: true });

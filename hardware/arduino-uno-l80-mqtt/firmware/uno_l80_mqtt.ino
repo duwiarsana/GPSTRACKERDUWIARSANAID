@@ -182,6 +182,7 @@ void publishLocation(bool force) {
   double spdKmph = gps.speed.isValid() ? gps.speed.kmph() : 0.0;
   int sats = gps.satellites.isValid() ? gps.satellites.value() : -1;
   double hdop = gps.hdop.isValid() ? gps.hdop.hdop() : 0.0; // accuracy proxy (smaller=better)
+  double altM = gps.altitude.isValid() ? gps.altitude.meters() : 0.0;
 
   // Read battery percentage
   float battPct = readBatteryPercent();
@@ -192,6 +193,7 @@ void publishLocation(bool force) {
   payload += "\"longitude\":" + String(lon, 6) + ",";
   payload += "\"speed\":" + String(spdKmph, 1) + ",";
   if (hdop > 0.0) payload += "\"accuracy\":" + String(hdop, 1) + ","; // optional
+  if (gps.altitude.isValid()) payload += "\"altitude\":" + String(altM, 1) + ","; // optional
   if (sats >= 0)  payload += "\"satellites\":" + String(sats) + ",";
   payload += "\"battery\":{\"level\":" + String((int)battPct) + ",\"isCharging\":false},";
   // timestamp omitted; backend will set now if absent

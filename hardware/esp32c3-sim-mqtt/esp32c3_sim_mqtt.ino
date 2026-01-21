@@ -106,6 +106,7 @@ void publishRandomWalk() {
   int satellites = 8 + (int)round(rndRange(-2.0, 3.0));
   if (satellites < 0) satellites = 0;
   double accuracy = rndRange(5.0, 15.0); // meters
+  double altitude = rndRange(5.0, 60.0); // meters (simulated)
   int batteryLevel = 100 - (millis() / 60000) % 30; // cycles down every 30 minutes
   if (batteryLevel < 10) batteryLevel = 10;
   bool isCharging = false;
@@ -128,13 +129,13 @@ void publishRandomWalk() {
   char payload[256];
   if (isoTs[0]) {
     snprintf(payload, sizeof(payload),
-             "{\"latitude\":%.6f,\"longitude\":%.6f,\"speed\":%.2f,\"accuracy\":%.2f,\"battery\":{\"level\":%d,\"isCharging\":%s},\"satellites\":%d,\"timestamp\":\"%s\"}",
-             baseLat, baseLng, speed, accuracy, batteryLevel, (isCharging ? "true" : "false"), satellites, isoTs);
+             "{\"latitude\":%.6f,\"longitude\":%.6f,\"speed\":%.2f,\"accuracy\":%.2f,\"altitude\":%.2f,\"battery\":{\"level\":%d,\"isCharging\":%s},\"satellites\":%d,\"timestamp\":\"%s\"}",
+             baseLat, baseLng, speed, accuracy, altitude, batteryLevel, (isCharging ? "true" : "false"), satellites, isoTs);
   } else {
     // fallback: backend will assign server time
     snprintf(payload, sizeof(payload),
-             "{\"latitude\":%.6f,\"longitude\":%.6f,\"speed\":%.2f,\"accuracy\":%.2f,\"battery\":{\"level\":%d,\"isCharging\":%s},\"satellites\":%d,\"timestamp\":\"\"}",
-             baseLat, baseLng, speed, accuracy, batteryLevel, (isCharging ? "true" : "false"), satellites);
+             "{\"latitude\":%.6f,\"longitude\":%.6f,\"speed\":%.2f,\"accuracy\":%.2f,\"altitude\":%.2f,\"battery\":{\"level\":%d,\"isCharging\":%s},\"satellites\":%d,\"timestamp\":\"\"}",
+             baseLat, baseLng, speed, accuracy, altitude, batteryLevel, (isCharging ? "true" : "false"), satellites);
   }
 
   bool ok = mqtt.publish(topic.c_str(), payload);

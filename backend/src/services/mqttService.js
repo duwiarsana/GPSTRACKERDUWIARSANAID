@@ -90,7 +90,7 @@ class MQTTService {
 
   async updateDeviceLocation(deviceId, locationData) {
     try {
-      const { latitude, longitude, speed, accuracy, battery, satellites } = locationData;
+      const { latitude, longitude, speed, accuracy, battery, satellites, altitude } = locationData;
       try {
         logger.debug('[MQTT] updateDeviceLocation rx', {
           deviceId,
@@ -98,6 +98,7 @@ class MQTTService {
           longitude,
           speed,
           accuracy,
+          altitude,
           satellites,
           hasBattery: !!battery,
         });
@@ -113,6 +114,7 @@ class MQTTService {
             timestamp: new Date(),
             ...(typeof speed === 'number' ? { speed } : {}),
             ...(typeof accuracy === 'number' ? { accuracy } : {}),
+            ...(typeof altitude === 'number' ? { altitude } : {}),
             ...(battery ? { battery } : {}),
             ...(typeof satellites === 'number' ? { satellites } : {}),
           },
@@ -145,6 +147,7 @@ class MQTTService {
             timestamp: new Date().toISOString(),
             ...(typeof speed === 'number' ? { speed } : {}),
             ...(typeof accuracy === 'number' ? { accuracy } : {}),
+            ...(typeof altitude === 'number' ? { altitude } : {}),
             ...(battery ? { battery: { level: battery.level, isCharging: battery.isCharging } } : {}),
             ...(typeof satellites === 'number' ? { satellites } : {}),
           },
@@ -159,7 +162,7 @@ class MQTTService {
 
   async saveLocationHistory(deviceId, locationData) {
     try {
-      const { latitude, longitude, speed, accuracy, battery, satellites, timestamp } = locationData;
+      const { latitude, longitude, speed, accuracy, battery, satellites, altitude, timestamp } = locationData;
       try {
         logger.debug('[MQTT] saveLocationHistory rx', {
           deviceId,
@@ -167,6 +170,7 @@ class MQTTService {
           longitude,
           speed,
           accuracy,
+          altitude,
           satellites,
           ts: timestamp,
         });
@@ -200,6 +204,7 @@ class MQTTService {
         },
         speed,
         accuracy,
+        altitude,
         satellites,
         battery: battery && {
           level: battery.level,
@@ -230,6 +235,7 @@ class MQTTService {
             timestamp: (timestamp ? new Date(timestamp) : new Date()).toISOString(),
             ...(typeof speed === 'number' ? { speed } : {}),
             ...(typeof accuracy === 'number' ? { accuracy } : {}),
+            ...(typeof altitude === 'number' ? { altitude } : {}),
             ...(battery ? { battery: { level: battery.level, isCharging: battery.isCharging } } : {}),
             ...(typeof satellites === 'number' ? { satellites } : {}),
           }

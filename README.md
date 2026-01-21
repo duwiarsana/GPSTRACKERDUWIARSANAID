@@ -28,7 +28,7 @@ Sistem pelacakan GPS **real‑time** dengan tampilan dashboard modern bergaya gl
   *(Riwayat lokasi (Visits): mengelompokkan titik yang berdekatan menjadi kunjungan otomatis untuk 24 jam terakhir)*
 - **Address / Reverse Geocoding**: UI can show a human-readable address for coordinates via backend reverse geocoding proxy (to avoid browser CORS/403 issues)  
   *(Alamat / reverse geocoding: UI bisa menampilkan alamat dari koordinat via proxy backend agar tidak kena CORS/403 dari browser)*
-- **Device Quick Stats**: Inline speed, satellites count, and color-coded battery level on device list  
+- **Device Quick Stats**: Inline speed, altitude, satellites count, and color-coded battery level on device list  
   *(Statistik cepat: kecepatan, jumlah satelit, dan level baterai berwarna langsung di daftar perangkat)*
 - **Status Markers**: Circle markers with black border; green when online, red when offline, with glass tooltip on hover showing name, speed, satellites, battery, and coordinates  
   *(Marker status: lingkaran hijau/merah dengan tooltip berisi nama, kecepatan, satelit, baterai, dan koordinat)*
@@ -287,6 +287,7 @@ Di bawah ini adalah format payload yang direkomendasikan (JSON), contoh, serta a
   "longitude": 115.38612878012613,
   "speed": 25.5,
   "accuracy": 10,
+  "altitude": 34.2,
   "battery": { "level": 77, "isCharging": false },
   "satellites": 7,
   "timestamp": "2025-11-21T02:22:00.000Z"
@@ -299,6 +300,7 @@ Di bawah ini adalah format payload yang direkomendasikan (JSON), contoh, serta a
 - **longitude**: number (derajat), rentang -180..180. Wajib.
 - **speed**: number (km/jam). Opsional. Gunakan 0 jika diam.
 - **accuracy**: number (meter, 1σ). Opsional. Abaikan jika modul tidak menyediakan.
+- **altitude**: number (meter di atas permukaan laut). Opsional.
 - **satellites**: integer (jumlah satelit fix). Opsional.
 - **battery.level**: integer 0..100 (%). Opsional.
 - **battery.isCharging**: boolean. Opsional.
@@ -334,7 +336,7 @@ Collections (simplified):
 - `devices`
   - Fields: `deviceId` (string, unique), `name`, `isActive`, `lastSeen`, `currentLocation` (GeoJSON Point + telemetry), `user`
 - `locations`
-  - Fields: `device` (ObjectId -> devices), `location` (GeoJSON Point), `timestamp`, optional `speed`, `accuracy`, `battery`, `satellites`, `metadata`
+  - Fields: `device` (ObjectId -> devices), `location` (GeoJSON Point), `timestamp`, optional `speed`, `accuracy`, `altitude`, `battery`, `satellites`, `metadata`
 
 Indexes (key ones):
 - `locations.location` 2dsphere
@@ -398,7 +400,7 @@ For support, please open an issue in the GitHub repository or contact the mainta
 
 The frontend subscribes to these Socket.IO events emitted by the backend:
 
-- `locationUpdate`: { deviceId, location: { type:'Point', coordinates:[lng,lat] }, speed?, accuracy?, battery?, satellites?, timestamp? }
+- `locationUpdate`: { deviceId, location: { type:'Point', coordinates:[lng,lat] }, speed?, accuracy?, altitude?, battery?, satellites?, timestamp? }
 - `deviceHeartbeat`: { deviceId, lastSeen }
 - `deviceInactive`: { deviceId }
 

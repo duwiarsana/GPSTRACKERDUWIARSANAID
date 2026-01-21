@@ -32,6 +32,10 @@ Location.init(
       type: DataTypes.FLOAT,
       allowNull: true,
     },
+    altitude: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
     battery: {
       type: DataTypes.JSON,
       allowNull: true,

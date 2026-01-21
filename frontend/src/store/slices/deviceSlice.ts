@@ -169,7 +169,8 @@ const deviceSlice = createSlice({
             speed: location.speed,
             battery: location.battery,
             accuracy: location.accuracy,
-            satellites: (location as any).satellites,
+            altitude: location.altitude,
+            satellites: location.satellites,
           },
           isActive: true,
         } as Device;
@@ -190,7 +191,8 @@ const deviceSlice = createSlice({
             speed: location.speed,
             battery: location.battery,
             accuracy: location.accuracy,
-            satellites: (location as any).satellites,
+            altitude: location.altitude,
+            satellites: location.satellites,
           },
           isActive: true,
         } as Device;
@@ -206,7 +208,7 @@ const deviceSlice = createSlice({
       }
     },
     applyInactive: (state, action: PayloadAction<{ deviceId: string; at?: string }>) => {
-      const { deviceId, at } = action.payload;
+      const { deviceId } = action.payload;
       if (state.currentDevice && (state.currentDevice.deviceId === deviceId || state.currentDevice.id === deviceId)) {
         state.currentDevice = {
           ...state.currentDevice,

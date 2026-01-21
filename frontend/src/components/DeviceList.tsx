@@ -4,6 +4,7 @@ import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 import SpeedRounded from '@mui/icons-material/SpeedRounded';
 import SatelliteAltRounded from '@mui/icons-material/SatelliteAltRounded';
+import HeightRounded from '@mui/icons-material/HeightRounded';
 import BatteryChargingFullRounded from '@mui/icons-material/BatteryChargingFullRounded';
 import Battery0BarRounded from '@mui/icons-material/Battery0BarRounded';
 import Battery2BarRounded from '@mui/icons-material/Battery2BarRounded';
@@ -614,6 +615,15 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                           <SatelliteAltRounded fontSize="small" color="action" />
                           <Typography variant="body2" color="text.secondary">
                             {device.isActive && typeof device.currentLocation?.satellites === 'number' ? `${device.currentLocation.satellites}` : '-'}
+                          </Typography>
+                        </Stack>
+                        {/* Altitude */}
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <HeightRounded fontSize="small" color="action" />
+                          <Typography variant="body2" color="text.secondary">
+                            {device.isActive && typeof device.currentLocation?.altitude === 'number'
+                              ? `${Number(device.currentLocation.altitude).toFixed(0)} m`
+                              : '-'}
                           </Typography>
                         </Stack>
                         {/* Battery with color-coded icon */}

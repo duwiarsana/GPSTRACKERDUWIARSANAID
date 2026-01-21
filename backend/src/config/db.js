@@ -1,11 +1,32 @@
+const { DataTypes } = require('sequelize');
 const logger = require('../utils/logger');
 const { sequelize } = require('../models');
+
+async function ensureColumn({ tableName, columnName, attributes }) {
+  try {
+    const qi = sequelize.getQueryInterface();
+    const desc = await qi.describeTable(tableName);
+    if (desc && !Object.prototype.hasOwnProperty.call(desc, columnName)) {
+      await qi.addColumn(tableName, columnName, attributes);
+      try { logger.info(`[db] Added column ${tableName}.${columnName}`); } catch {}
+    }
+  } catch (e) {
+    try { logger.warn(`[db] ensureColumn skipped for ${tableName}.${columnName}: ${e.message}`); } catch {}
+  }
+}
 
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
     logger.info(`MySQL Connected: ${process.env.MYSQL_HOST || '127.0.0.1'}`);
     await sequelize.sync();
+
+    // Safe schema patching for existing DBs (sequelize.sync() does not alter columns)
+    await ensureColumn({
+      tableName: 'locations',
+      columnName: 'altitude',
+      attributes: { type: DataTypes.FLOAT, allowNull: true },
+    });
   } catch (error) {
     logger.error(`Error: ${error.message}`);
     process.exit(1);
