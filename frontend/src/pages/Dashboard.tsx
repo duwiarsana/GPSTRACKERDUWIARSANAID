@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Box, Container, Stack, Typography, Paper, Button, Chip, Divider, Skeleton, IconButton, Tooltip, Slide, FormControlLabel, Switch, TextField } from '@mui/material';
+import { Box, Container, Stack, Typography, Paper, Button, Chip, Divider, Skeleton, IconButton, Tooltip, Slide, FormControlLabel, Switch, TextField, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import L from 'leaflet';
 import DevicesOtherIcon from '@mui/icons-material/DevicesOther';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
@@ -37,6 +38,8 @@ import { apiService } from '../services/api';
 
 const DashboardPage: React.FC = () => {
   const dispatch = useAppDispatch();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isAuthenticated } = useAppSelector(selectAuth);
   const devices = useAppSelector(selectDevices);
   const deviceLoading = useAppSelector(selectDeviceLoading);
@@ -422,7 +425,7 @@ const DashboardPage: React.FC = () => {
       {/* Overlay content */}
       <Box sx={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
         {/* Toggle button */}
-        <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 2, pointerEvents: 'auto' }}>
+        <Box sx={{ position: 'absolute', top: { xs: 8, md: 16 }, right: { xs: 8, md: 16 }, zIndex: 2, pointerEvents: 'auto' }}>
           <Tooltip title={panelsVisible ? 'Sembunyikan panel' : 'Tampilkan panel'}>
             <IconButton color="primary" onClick={() => setPanelsVisible((prev) => !prev)}>
               {panelsVisible ? <ExpandLessIcon /> : <ExpandMoreIcon />}
@@ -430,7 +433,17 @@ const DashboardPage: React.FC = () => {
           </Tooltip>
         </Box>
 
-        <Container maxWidth="xl" sx={{ pt: 3, pb: 3, pointerEvents: 'auto' }}>
+        <Container
+          maxWidth="xl"
+          sx={{
+            pt: { xs: 1.5, md: 3 },
+            pb: { xs: 1.5, md: 3 },
+            pointerEvents: 'auto',
+            height: '100%',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
           <Slide
             in={panelsVisible}
             direction="down"
@@ -442,7 +455,13 @@ const DashboardPage: React.FC = () => {
           >
             <Stack spacing={2} sx={{ pointerEvents: panelsVisible ? 'auto' : 'none' }}>
               {/* Use cachedDevice to keep UI stable while switching */}
-              <Stack direction="row" justifyContent="flex-end" spacing={2} alignItems="center" sx={{ px: 1 }}>
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
+                spacing={{ xs: 1, md: 2 }}
+                alignItems={{ xs: 'stretch', md: 'center' }}
+                sx={{ px: 1, flexWrap: 'wrap' }}
+              >
                   <Chip
                     icon={<SatelliteAltIcon />}
                     label={(cachedDevice || selectedDevice)?.deviceId || '-'}
@@ -453,13 +472,14 @@ const DashboardPage: React.FC = () => {
                       bgcolor: (theme) => (cachedDevice || selectedDevice)?.isActive ? theme.palette.success.main : theme.palette.warning.main,
                       color: (theme) => theme.palette.getContrastText((cachedDevice || selectedDevice)?.isActive ? theme.palette.success.main : theme.palette.warning.main),
                       boxShadow: '0 3px 10px rgba(15,23,42,0.15)',
-                      transition: 'none !important'
+                      transition: 'none !important',
+                      alignSelf: { xs: 'flex-start', md: 'auto' },
                     }}
                   />
                   <FormControlLabel
                     control={<Switch color="primary" checked={!latestOnly} onChange={(e) => setLatestOnly(!e.target.checked)} />}
                     label={
-                      <Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em' }}>
+                      <Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: { xs: 11, md: 13 } }}>
                         SHOW PATH
                       </Typography>
                     }
@@ -467,7 +487,7 @@ const DashboardPage: React.FC = () => {
                   <FormControlLabel
                     control={<Switch color="primary" checked={showAllDevices} onChange={(e) => setShowAllDevices(e.target.checked)} disabled={!latestOnly} />}
                     label={
-                      <Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em' }}>
+                      <Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: { xs: 11, md: 13 } }}>
                         SHOW ALL DEVICES
                       </Typography>
                     }
@@ -485,7 +505,7 @@ const DashboardPage: React.FC = () => {
                         value={dateStr ?? ''}
                         onChange={(e) => setDateStr(e.target.value || null)}
                         InputLabelProps={{ shrink: true }}
-                        sx={{ minWidth: 170, bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
+                        sx={{ minWidth: { xs: '100%', md: 170 }, width: { xs: '100%', md: 'auto' }, bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
                         disabled={latestOnly}
                       />
                       <TextField
@@ -495,7 +515,7 @@ const DashboardPage: React.FC = () => {
                         value={fromTimeStr ?? ''}
                         onChange={(e) => setFromTimeStr(e.target.value || null)}
                         InputLabelProps={{ shrink: true }}
-                        sx={{ minWidth: 150, bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
+                        sx={{ minWidth: { xs: '100%', md: 150 }, width: { xs: '100%', md: 'auto' }, bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
                         disabled={latestOnly}
                       />
                       <TextField
@@ -505,14 +525,16 @@ const DashboardPage: React.FC = () => {
                         value={toTimeStr ?? ''}
                         onChange={(e) => setToTimeStr(e.target.value || null)}
                         InputLabelProps={{ shrink: true }}
-                        sx={{ minWidth: 150, bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
+                        sx={{ minWidth: { xs: '100%', md: 150 }, width: { xs: '100%', md: 'auto' }, bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
                         disabled={latestOnly}
                       />
-                      <Button variant="text" disabled={latestOnly} onClick={() => { setDateStr(null); setFromTimeStr(null); setToTimeStr(null); }}>Clear</Button>
+                      <Button size={isMobile ? 'small' : 'medium'} variant="text" disabled={latestOnly} onClick={() => { setDateStr(null); setFromTimeStr(null); setToTimeStr(null); }} sx={{ width: { xs: '100%', md: 'auto' } }}>Clear</Button>
                   </Stack>
                   <Button
                     variant="contained"
                     color="primary"
+                    size={isMobile ? 'small' : 'medium'}
+                    fullWidth={isMobile}
                     sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}
                     onClick={() => {
                       if (!map) return;
@@ -522,13 +544,15 @@ const DashboardPage: React.FC = () => {
                   >
                     Reset View
                   </Button>
-                  <Button variant="contained" startIcon={<HistoryIcon />} onClick={handlePingDevice} disabled={!cachedDevice && !selectedDevice} sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}>
+                  <Button variant="contained" startIcon={<HistoryIcon />} size={isMobile ? 'small' : 'medium'} fullWidth={isMobile} onClick={handlePingDevice} disabled={!cachedDevice && !selectedDevice} sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}>
                     Ping Device
                   </Button>
                   <Button
                     variant="contained"
                     color="secondary"
                     onClick={() => dispatch(logout())}
+                    size={isMobile ? 'small' : 'medium'}
+                    fullWidth={isMobile}
                     sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}
                   >
                     Logout

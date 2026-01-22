@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Stack, FormControlLabel, Switch } from '@mui/material';
+import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Stack, FormControlLabel, Switch } from '@mui/material';
 import type { Location } from '../types';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { format } from 'date-fns';
@@ -171,30 +171,33 @@ const LocationHistoryTable: React.FC<LocationHistoryTableProps> = ({ locations, 
 
   return (
     <Paper elevation={0} sx={mergedSx}>
-      <Stack direction="row" alignItems="center" px={2} py={1.5} sx={{ position: 'relative', pr: '392px' }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }} px={2} py={1.5} spacing={{ xs: 1, sm: 0 }} sx={{ position: 'relative', pr: { xs: 2, md: '392px' } }}>
         <Typography variant="subtitle1" fontWeight={600}>
           {showVisits ? 'Visit Locations' : 'Location Points'}
         </Typography>
+        <Box sx={{ flexGrow: 1 }} />
         <Stack
           direction="row"
           spacing={2}
           alignItems="center"
           sx={{
-            position: 'absolute',
-            right: 16,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: 360,
-            justifyContent: 'flex-end'
+            position: { xs: 'static', md: 'absolute' },
+            right: { md: 16 },
+            top: { md: '50%' },
+            transform: { xs: 'none', md: 'translateY(-50%)' },
+            width: { xs: '100%', md: 360 },
+            justifyContent: { xs: 'space-between', md: 'flex-end' },
+            flexWrap: { xs: 'wrap', md: 'nowrap' },
+            gap: { xs: 1, md: 0 },
           }}
         >
-          <Typography variant="body2" color="text.secondary" sx={{ width: 160, textAlign: 'right', whiteSpace: 'nowrap' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ width: { xs: 'auto', md: 160 }, textAlign: { xs: 'left', md: 'right' }, whiteSpace: 'nowrap' }}>
             {showVisits ? `Showing ${visits.length} visits` : `Showing ${pointRows.length} locations`}
           </Typography>
           <FormControlLabel
             control={<Switch color="primary" checked={showVisits} onChange={(e) => setShowVisits(e.target.checked)} />}
             label={<Typography variant="body2">Visits</Typography>}
-            sx={{ ml: 1, minWidth: 160, justifyContent: 'flex-end' }}
+            sx={{ ml: { xs: 0, md: 1 }, minWidth: { xs: 'auto', md: 160 }, justifyContent: 'flex-end' }}
           />
         </Stack>
       </Stack>

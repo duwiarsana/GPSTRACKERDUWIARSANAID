@@ -379,11 +379,11 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
   return (
     <Paper elevation={0} sx={mergeSx({ pb: 2 })}>
       <Box px={2} pt={2} pb={1}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={{ xs: 1, md: 0 }}>
           <Typography variant="subtitle1" fontWeight={600}>
             Devices
           </Typography>
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexWrap: 'wrap' }}>
             <Chip label={`${devices.length} total`} size="small" color="primary" variant="outlined" />
             {totalPages > 1 && (
               <Pagination
