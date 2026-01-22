@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Box, Container, Stack, Typography, Paper, Button, Chip, Divider, Skeleton, IconButton, Tooltip, Slide, FormControlLabel, Switch, TextField, useMediaQuery } from '@mui/material';
+import { Box, Container, Stack, Typography, Paper, Button, Chip, Divider, Skeleton, IconButton, Tooltip, Slide, FormControlLabel, Switch, TextField, useMediaQuery, Tabs, Tab } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import L from 'leaflet';
 import DevicesOtherIcon from '@mui/icons-material/DevicesOther';
@@ -56,6 +56,7 @@ const DashboardPage: React.FC = () => {
   const [dateStr, setDateStr] = useState<string | null>(null); // YYYY-MM-DD
   const [fromTimeStr, setFromTimeStr] = useState<string | null>(null); // HH:MM
   const [toTimeStr, setToTimeStr] = useState<string | null>(null); // HH:MM
+  const [mobileTab, setMobileTab] = useState<number>(0);
 
   const normalizeDate = useCallback((d: string | null): string | null => {
     const raw = String(d ?? '').trim();
@@ -389,6 +390,213 @@ const DashboardPage: React.FC = () => {
     const deviceId = selectedDevice.deviceId;
     sendCommand(deviceId, 'PING');
   };
+
+  if (isMobile) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        <Container maxWidth="sm" sx={{ pt: 1.5, pb: 2 }}>
+          {!isAuthenticated ? (
+            renderAuthNotice()
+          ) : (
+            <Stack spacing={1.5}>
+              <Paper elevation={0} sx={{ ...glassPanelSx, p: 1.5 }}>
+                <Stack spacing={1.25}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Chip
+                      icon={<SatelliteAltIcon />}
+                      label={(cachedDevice || selectedDevice)?.deviceId || '-'}
+                      color={(cachedDevice || selectedDevice)?.isActive ? 'success' : 'warning'}
+                      variant="filled"
+                      size="small"
+                      sx={{
+                        fontWeight: 700,
+                        bgcolor: (t) => (cachedDevice || selectedDevice)?.isActive ? t.palette.success.main : t.palette.warning.main,
+                        color: (t) => t.palette.getContrastText((cachedDevice || selectedDevice)?.isActive ? t.palette.success.main : t.palette.warning.main),
+                      }}
+                    />
+                    <Box sx={{ flexGrow: 1 }} />
+                    <Button size="small" variant="contained" color="secondary" onClick={() => dispatch(logout())}>
+                      Logout
+                    </Button>
+                  </Stack>
+
+                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+                    <FormControlLabel
+                      control={<Switch color="primary" checked={!latestOnly} onChange={(e) => setLatestOnly(!e.target.checked)} />}
+                      label={<Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: 11 }}>PATH</Typography>}
+                      sx={{ mr: 0 }}
+                    />
+                    <FormControlLabel
+                      control={<Switch color="primary" checked={showAllDevices} onChange={(e) => setShowAllDevices(e.target.checked)} disabled={!latestOnly} />}
+                      label={<Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: 11 }}>ALL</Typography>}
+                      sx={{ mr: 0 }}
+                    />
+                  </Stack>
+
+                  {!latestOnly && (
+                    <Stack spacing={1}>
+                      <TextField
+                        label="Date"
+                        type="date"
+                        size="small"
+                        value={dateStr ?? ''}
+                        onChange={(e) => setDateStr(e.target.value || null)}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
+                        fullWidth
+                      />
+                      <Stack direction="row" spacing={1}>
+                        <TextField
+                          label="From"
+                          type="time"
+                          size="small"
+                          value={fromTimeStr ?? ''}
+                          onChange={(e) => setFromTimeStr(e.target.value || null)}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{ bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
+                          fullWidth
+                        />
+                        <TextField
+                          label="To"
+                          type="time"
+                          size="small"
+                          value={toTimeStr ?? ''}
+                          onChange={(e) => setToTimeStr(e.target.value || null)}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{ bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
+                          fullWidth
+                        />
+                      </Stack>
+                      <Button size="small" variant="text" onClick={() => { setDateStr(null); setFromTimeStr(null); setToTimeStr(null); }}>
+                        Clear
+                      </Button>
+                    </Stack>
+                  )}
+
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      fullWidth
+                      size="small"
+                      variant="contained"
+                      color="primary"
+                      onClick={() => {
+                        if (!map) return;
+                        const indonesiaBounds = L.latLngBounds([[-11.0, 95.0], [6.5, 141.0]]);
+                        map.fitBounds(indonesiaBounds, { padding: [24, 24] });
+                      }}
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      fullWidth
+                      size="small"
+                      variant="contained"
+                      startIcon={<HistoryIcon />}
+                      onClick={handlePingDevice}
+                      disabled={!cachedDevice && !selectedDevice}
+                    >
+                      Ping
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Paper>
+
+              <Paper elevation={0} sx={{ ...glassPanelSx, overflow: 'hidden' }}>
+                <Box sx={{ position: 'relative' }}>
+                  <MapView
+                    device={selectedDevice}
+                    devices={devices as unknown as Device[]}
+                    locations={locations}
+                    height="42vh"
+                    bare
+                    latestOnly={latestOnly}
+                    showAllDevices={showAllDevices}
+                    onMapReady={handleMapReady}
+                    from={pathFrom}
+                    to={pathTo}
+                    statsLatest={(stats as any)?.deviceId === selectedDeviceId ? (stats as any)?.latestLocation ?? null : null}
+                    forceTick={forceTick}
+                    activeId={selectedDeviceId}
+                    geofence={geofence}
+                  />
+                  {locationsState.loading && (
+                    <Skeleton
+                      variant="rectangular"
+                      width="100%"
+                      height="100%"
+                      sx={{ position: 'absolute', inset: 0, zIndex: 0, opacity: 0.35, transition: 'opacity 200ms ease', willChange: 'opacity' }}
+                    />
+                  )}
+                </Box>
+              </Paper>
+
+              <Paper elevation={0} sx={{ ...glassPanelSx, overflow: 'hidden' }}>
+                <Tabs value={mobileTab} onChange={(_, v) => setMobileTab(v)} variant="fullWidth">
+                  <Tab label="Devices" />
+                  <Tab label="History" />
+                  <Tab label="Stats" />
+                </Tabs>
+              </Paper>
+
+              {mobileTab === 0 && (
+                <DeviceList
+                  devices={devices}
+                  selectedId={selectedDeviceId}
+                  onSelect={(id) => handleSelectDevice(id)}
+                  loading={deviceLoading && devices.length === 0}
+                  containerSx={glassPanelSx}
+                  onRefresh={() => dispatch(fetchDevices())}
+                  showPath={!latestOnly}
+                  pathDistanceKm={tripDistanceKm}
+                  pathDistanceLoading={locationsState.loading}
+                />
+              )}
+
+              {mobileTab === 1 && (
+                <LocationHistoryTable locations={locations} containerSx={glassPanelSx} />
+              )}
+
+              {mobileTab === 2 && (
+                <Stack spacing={1.5}>
+                  {metricsRow}
+                  <Paper sx={{ ...glassPanelSx, p: 2 }}>
+                    <Stack spacing={1.5}>
+                      <Stack spacing={0.5}>
+                        <Typography variant="subtitle2" color="text.secondary">Last Update</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 400 }}>
+                          {cachedStats.lastUpdate ? new Date(cachedStats.lastUpdate).toLocaleString() : '-'}
+                        </Typography>
+                      </Stack>
+                      <Stack spacing={0.5}>
+                        <Typography variant="subtitle2" color="text.secondary">Average Speed</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 400 }}>
+                          {cachedStats.avgSpeed ? `${cachedStats.avgSpeed.toFixed(1)} km/h` : '-'}
+                        </Typography>
+                      </Stack>
+                      <Stack spacing={0.5}>
+                        <Typography variant="subtitle2" color="text.secondary">Max Speed</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 400 }}>
+                          {cachedStats.maxSpeed ? `${cachedStats.maxSpeed.toFixed(1)} km/h` : '-'}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </Paper>
+                </Stack>
+              )}
+
+              {deviceError && (
+                <Paper sx={{ ...glassPanelSx, p: 2 }}>
+                  <Typography variant="subtitle2" color="error">
+                    {deviceError}
+                  </Typography>
+                </Paper>
+              )}
+            </Stack>
+          )}
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ position: 'relative', height: '100vh', bgcolor: 'background.default' }}>
