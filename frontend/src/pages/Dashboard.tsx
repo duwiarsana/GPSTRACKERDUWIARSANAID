@@ -399,8 +399,21 @@ const DashboardPage: React.FC = () => {
             renderAuthNotice()
           ) : (
             <Stack spacing={1.5}>
-              <Paper elevation={0} sx={{ ...glassPanelSx, p: 1.5 }}>
+              <Paper elevation={0} sx={{ ...glassPanelSx, p: 1.5, position: 'sticky', top: 0, zIndex: 10 }}>
                 <Stack spacing={1.25}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, letterSpacing: '0.02em' }}>
+                      GPS Tracker
+                    </Typography>
+                    <Box sx={{ flexGrow: 1 }} />
+                    <Chip
+                      label={(cachedDevice || selectedDevice)?.isActive ? 'Online' : 'Offline'}
+                      color={(cachedDevice || selectedDevice)?.isActive ? 'success' : 'warning'}
+                      size="small"
+                      sx={{ fontWeight: 700 }}
+                    />
+                  </Stack>
+
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <Chip
                       icon={<SatelliteAltIcon />}
@@ -415,7 +428,7 @@ const DashboardPage: React.FC = () => {
                       }}
                     />
                     <Box sx={{ flexGrow: 1 }} />
-                    <Button size="small" variant="contained" color="secondary" onClick={() => dispatch(logout())}>
+                    <Button size="small" variant="contained" color="secondary" disableElevation onClick={() => dispatch(logout())}>
                       Logout
                     </Button>
                   </Stack>
@@ -479,6 +492,7 @@ const DashboardPage: React.FC = () => {
                       size="small"
                       variant="contained"
                       color="primary"
+                      disableElevation
                       onClick={() => {
                         if (!map) return;
                         const indonesiaBounds = L.latLngBounds([[-11.0, 95.0], [6.5, 141.0]]);
@@ -492,12 +506,31 @@ const DashboardPage: React.FC = () => {
                       size="small"
                       variant="contained"
                       startIcon={<HistoryIcon />}
+                      disableElevation
                       onClick={handlePingDevice}
                       disabled={!cachedDevice && !selectedDevice}
                     >
                       Ping
                     </Button>
                   </Stack>
+
+                  <Paper elevation={0} sx={{ mt: 0.5, borderRadius: 2, overflow: 'hidden', bgcolor: 'transparent' }}>
+                    <Tabs
+                      value={mobileTab}
+                      onChange={(_, v) => setMobileTab(v)}
+                      variant="fullWidth"
+                      textColor="primary"
+                      indicatorColor="primary"
+                      sx={{
+                        minHeight: 40,
+                        '& .MuiTab-root': { minHeight: 40, fontWeight: 800, letterSpacing: '0.06em', fontSize: 11 },
+                      }}
+                    >
+                      <Tab label="Devices" />
+                      <Tab label="History" />
+                      <Tab label="Stats" />
+                    </Tabs>
+                  </Paper>
                 </Stack>
               </Paper>
 
@@ -507,7 +540,7 @@ const DashboardPage: React.FC = () => {
                     device={selectedDevice}
                     devices={devices as unknown as Device[]}
                     locations={locations}
-                    height="42vh"
+                    height="clamp(280px, 42vh, 420px)"
                     bare
                     latestOnly={latestOnly}
                     showAllDevices={showAllDevices}
@@ -528,14 +561,6 @@ const DashboardPage: React.FC = () => {
                     />
                   )}
                 </Box>
-              </Paper>
-
-              <Paper elevation={0} sx={{ ...glassPanelSx, overflow: 'hidden' }}>
-                <Tabs value={mobileTab} onChange={(_, v) => setMobileTab(v)} variant="fullWidth">
-                  <Tab label="Devices" />
-                  <Tab label="History" />
-                  <Tab label="Stats" />
-                </Tabs>
               </Paper>
 
               {mobileTab === 0 && (
@@ -647,8 +672,8 @@ const DashboardPage: React.FC = () => {
             pt: { xs: 1.5, md: 3 },
             pb: { xs: 1.5, md: 3 },
             pointerEvents: 'auto',
-            height: '100%',
-            overflowY: 'auto',
+            height: { xs: '100%', md: 'auto' },
+            overflowY: { xs: 'auto', md: 'visible' },
             WebkitOverflowScrolling: 'touch',
           }}
         >
