@@ -1,11 +1,22 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import type { LoginCredentials, RegisterData, Device, Location, DeviceStats } from '../types';
 
-export const API_URL =
-  process.env.REACT_APP_API_URL ||
-  (typeof window !== 'undefined'
-    ? `${window.location.protocol}//${window.location.hostname}:5050/api/v1`
-    : 'http://localhost:5050/api/v1');
+export const API_URL = (() => {
+  const envUrl = process.env.REACT_APP_API_URL;
+  if (envUrl) return envUrl;
+
+  if (typeof window === 'undefined') {
+    return 'http://localhost:5050/api/v1';
+  }
+
+  const host = window.location.hostname;
+  const isLocal = host === 'localhost' || host === '127.0.0.1';
+  if (isLocal) {
+    return `${window.location.protocol}//${host}:5050/api/v1`;
+  }
+
+  return `${window.location.origin}/api/v1`;
+})();
 
 class ApiService {
   private api: AxiosInstance;
