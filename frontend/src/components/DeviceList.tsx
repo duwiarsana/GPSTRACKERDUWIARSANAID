@@ -664,36 +664,40 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                 }
                 primaryTypographyProps={{ component: 'div' }}
                 secondary={
-                  <Stack spacing={0.25} sx={{ mt: 0.25 }}>
-                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.75, sm: 1.5 } }}>
+                  isMobile ? (
+                    <Stack spacing={0.75} sx={{ mt: 0.5 }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, lineHeight: 1.2 }}>
                         Last seen {lastSeen}
                       </Typography>
-                      <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5, columnGap: 1.25, justifyContent: { xs: 'flex-start', sm: 'flex-end' }, width: { xs: '100%', sm: 'auto' } }}>
-                        {/* Speed */}
-                        <Stack direction="row" spacing={0.5} alignItems="center">
-                          <SpeedRounded fontSize="small" color="action" />
-                          <Typography variant="body2" color="text.secondary">
-                            {device.isActive && typeof device.currentLocation?.speed === 'number' ? `${device.currentLocation.speed.toFixed(1)} km/h` : '-'}
+
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                          gap: 0.75,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+                          <SpeedRounded sx={{ fontSize: 16 }} color="action" />
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+                            {device.isActive && typeof device.currentLocation?.speed === 'number' ? `${device.currentLocation.speed.toFixed(1)}` : '-'}
                           </Typography>
                         </Stack>
-                        {/* Satellites */}
-                        <Stack direction="row" spacing={0.5} alignItems="center">
-                          <SatelliteAltRounded fontSize="small" color="action" />
-                          <Typography variant="body2" color="text.secondary">
+                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+                          <SatelliteAltRounded sx={{ fontSize: 16 }} color="action" />
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                             {device.isActive && typeof device.currentLocation?.satellites === 'number' ? `${device.currentLocation.satellites}` : '-'}
                           </Typography>
                         </Stack>
-                        {/* Altitude */}
-                        <Stack direction="row" spacing={0.5} alignItems="center">
-                          <HeightRounded fontSize="small" color="action" />
-                          <Typography variant="body2" color="text.secondary">
+                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+                          <HeightRounded sx={{ fontSize: 16 }} color="action" />
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                             {device.isActive && typeof device.currentLocation?.altitude === 'number'
-                              ? `${Number(device.currentLocation.altitude).toFixed(0)} m`
+                              ? `${Number(device.currentLocation.altitude).toFixed(0)}m`
                               : '-'}
                           </Typography>
                         </Stack>
-                        {/* Battery with color-coded icon */}
                         {(() => {
                           const active = !!device.isActive;
                           const level = active && typeof device.currentLocation?.battery?.level === 'number' ? Math.round(device.currentLocation.battery.level) : null;
@@ -709,17 +713,19 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                             return BatteryFullRounded;
                           })();
                           return (
-                            <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
                               <Box sx={{ color }}>
-                                <Icon fontSize="small" />
+                                <Icon sx={{ fontSize: 16 }} />
                               </Box>
-                              <Typography variant="body2" color="text.secondary">
+                              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                                 {level == null ? '-' : `${level}%${charging ? '⚡' : ''}`}
                               </Typography>
                             </Stack>
                           );
                         })()}
+                      </Box>
 
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end" sx={{ pt: 0.25 }}>
                         <Tooltip title="Edit geofence">
                           <IconButton
                             size="small"
@@ -728,7 +734,6 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                               event.stopPropagation();
                               handleOpenGeofence(device);
                             }}
-                            sx={{ ml: { xs: 0, sm: 0.25 } }}
                           >
                             <AddLocationAltRounded fontSize="small" />
                           </IconButton>
@@ -741,14 +746,95 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                               event.stopPropagation();
                               handleRequestDelete(device);
                             }}
-                            sx={{ ml: { xs: 0, sm: 0.25 } }}
                           >
                             <DeleteOutlineRounded fontSize="small" />
                           </IconButton>
                         </Tooltip>
                       </Stack>
-                    </Box>
-                  </Stack>
+                    </Stack>
+                  ) : (
+                    <Stack spacing={0.25} sx={{ mt: 0.25 }}>
+                      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.75, sm: 1.5 } }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, lineHeight: 1.2 }}>
+                          Last seen {lastSeen}
+                        </Typography>
+                        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5, columnGap: 1.25, justifyContent: { xs: 'flex-start', sm: 'flex-end' }, width: { xs: '100%', sm: 'auto' } }}>
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <SpeedRounded fontSize="small" color="action" />
+                            <Typography variant="body2" color="text.secondary">
+                              {device.isActive && typeof device.currentLocation?.speed === 'number' ? `${device.currentLocation.speed.toFixed(1)} km/h` : '-'}
+                            </Typography>
+                          </Stack>
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <SatelliteAltRounded fontSize="small" color="action" />
+                            <Typography variant="body2" color="text.secondary">
+                              {device.isActive && typeof device.currentLocation?.satellites === 'number' ? `${device.currentLocation.satellites}` : '-'}
+                            </Typography>
+                          </Stack>
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <HeightRounded fontSize="small" color="action" />
+                            <Typography variant="body2" color="text.secondary">
+                              {device.isActive && typeof device.currentLocation?.altitude === 'number'
+                                ? `${Number(device.currentLocation.altitude).toFixed(0)} m`
+                                : '-'}
+                            </Typography>
+                          </Stack>
+                          {(() => {
+                            const active = !!device.isActive;
+                            const level = active && typeof device.currentLocation?.battery?.level === 'number' ? Math.round(device.currentLocation.battery.level) : null;
+                            const charging = active && !!device.currentLocation?.battery?.isCharging;
+                            const color = !active || level == null ? 'text.secondary' : level < 20 ? 'error.main' : level < 50 ? 'warning.main' : 'success.main';
+                            const Icon = (() => {
+                              if (charging) return BatteryChargingFullRounded;
+                              if (level == null) return Battery4BarRounded;
+                              if (level < 5) return Battery0BarRounded;
+                              if (level < 25) return Battery2BarRounded;
+                              if (level < 60) return Battery4BarRounded;
+                              if (level < 85) return Battery6BarRounded;
+                              return BatteryFullRounded;
+                            })();
+                            return (
+                              <Stack direction="row" spacing={0.5} alignItems="center">
+                                <Box sx={{ color }}>
+                                  <Icon fontSize="small" />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary">
+                                  {level == null ? '-' : `${level}%${charging ? '⚡' : ''}`}
+                                </Typography>
+                              </Stack>
+                            );
+                          })()}
+
+                          <Tooltip title="Edit geofence">
+                            <IconButton
+                              size="small"
+                              color="warning"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleOpenGeofence(device);
+                              }}
+                              sx={{ ml: { xs: 0, sm: 0.25 } }}
+                            >
+                              <AddLocationAltRounded fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete device">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleRequestDelete(device);
+                              }}
+                              sx={{ ml: { xs: 0, sm: 0.25 } }}
+                            >
+                              <DeleteOutlineRounded fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  )
                 }
                 secondaryTypographyProps={{ component: 'div' }}
               />
