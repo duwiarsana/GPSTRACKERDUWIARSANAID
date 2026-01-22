@@ -1,5 +1,6 @@
-import { Paper, List, ListItemButton, ListItemAvatar, Avatar, ListItemText, Chip, Stack, Typography, CircularProgress, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, IconButton, Tooltip, Pagination } from '@mui/material';
+import { Paper, List, ListItemButton, ListItemAvatar, Avatar, ListItemText, Chip, Stack, Typography, CircularProgress, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, IconButton, Tooltip, Pagination, Menu, MenuItem, useMediaQuery } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 import SpeedRounded from '@mui/icons-material/SpeedRounded';
@@ -14,6 +15,7 @@ import BatteryFullRounded from '@mui/icons-material/BatteryFullRounded';
 import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
 import AddLocationAltRounded from '@mui/icons-material/AddLocationAltRounded';
 import EditRounded from '@mui/icons-material/EditRounded';
+import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import type { Device } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -33,6 +35,8 @@ interface DeviceListProps {
 }
 
 const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, loading, containerSx, onRefresh, showPath = false, pathDistanceKm, pathDistanceLoading = false }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const mergeSx = (base: SxProps<Theme>): SxProps<Theme> =>
     containerSx ? ([...(Array.isArray(containerSx) ? containerSx : [containerSx]), base] as SxProps<Theme>) : base;
 
@@ -46,6 +50,9 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const pageSize = 5;
+
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const menuOpen = Boolean(menuAnchorEl);
 
   const [addressCache, setAddressCache] = useState<Record<string, string>>({});
   const [addressLoading, setAddressLoading] = useState<Record<string, boolean>>({});
@@ -397,34 +404,94 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                 hideNextButton
               />
             )}
-            <Button size="small" variant="outlined" color="warning" disabled={!selectedId} onClick={async () => {
-              if (!selectedId) return;
-              const confirm = window.confirm('Hapus semua lokasi untuk device terpilih? OK: hapus + reset current, Cancel: hapus tanpa reset.');
-              try {
-                const res = await apiService.deleteDeviceLocations(selectedId, { resetCurrent: confirm });
-                onRefresh && onRefresh();
-                // eslint-disable-next-line no-alert
-                alert(`Deleted ${res.deleted} locations${res.resetCurrent ? ' and reset currentLocation' : ''}.`);
-              } catch (e: any) {
-                // eslint-disable-next-line no-alert
-                alert(`Gagal hapus locations: ${e?.response?.data?.error || e?.message || 'Unknown error'}`);
-              }
-            }}>Clear Selected History</Button>
-            <Button size="small" variant="outlined" color="error" onClick={async () => {
-              const proceed = window.confirm('ADMIN ONLY: Hapus SEMUA data lokasi untuk semua device? Klik OK untuk lanjut.');
-              if (!proceed) return;
-              const reset = window.confirm('Juga reset current location untuk semua device? OK untuk ya, Cancel untuk tidak.');
-              try {
-                const res = await apiService.deleteAllLocations({ resetCurrent: reset });
-                onRefresh && onRefresh();
-                // eslint-disable-next-line no-alert
-                alert(`Deleted ${res.deleted} locations total${res.resetCurrent ? ' and reset currentLocation for all devices' : ''}.`);
-              } catch (e: any) {
-                // eslint-disable-next-line no-alert
-                alert(`Gagal hapus semua data: ${e?.response?.data?.error || e?.message || 'Unknown error'}`);
-              }
-            }}>Clear ALL Data</Button>
-            <Button size="small" variant="contained" onClick={() => setOpen(true)}>Add Device</Button>
+            <Button size="small" variant="contained" onClick={() => setOpen(true)}>
+              Add Device
+            </Button>
+            {isMobile ? (
+              <>
+                <Tooltip title="More">
+                  <IconButton size="small" onClick={(e) => setMenuAnchorEl(e.currentTarget)}>
+                    <MoreVertRounded fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Menu
+                  anchorEl={menuAnchorEl}
+                  open={menuOpen}
+                  onClose={() => setMenuAnchorEl(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                >
+                  <MenuItem
+                    disabled={!selectedId}
+                    onClick={async () => {
+                      setMenuAnchorEl(null);
+                      if (!selectedId) return;
+                      const confirm = window.confirm('Hapus semua lokasi untuk device terpilih? OK: hapus + reset current, Cancel: hapus tanpa reset.');
+                      try {
+                        const res = await apiService.deleteDeviceLocations(selectedId, { resetCurrent: confirm });
+                        onRefresh && onRefresh();
+                        // eslint-disable-next-line no-alert
+                        alert(`Deleted ${res.deleted} locations${res.resetCurrent ? ' and reset currentLocation' : ''}.`);
+                      } catch (e: any) {
+                        // eslint-disable-next-line no-alert
+                        alert(`Gagal hapus locations: ${e?.response?.data?.error || e?.message || 'Unknown error'}`);
+                      }
+                    }}
+                  >
+                    Clear Selected History
+                  </MenuItem>
+                  <MenuItem
+                    onClick={async () => {
+                      setMenuAnchorEl(null);
+                      const proceed = window.confirm('ADMIN ONLY: Hapus SEMUA data lokasi untuk semua device? Klik OK untuk lanjut.');
+                      if (!proceed) return;
+                      const reset = window.confirm('Juga reset current location untuk semua device? OK untuk ya, Cancel untuk tidak.');
+                      try {
+                        const res = await apiService.deleteAllLocations({ resetCurrent: reset });
+                        onRefresh && onRefresh();
+                        // eslint-disable-next-line no-alert
+                        alert(`Deleted ${res.deleted} locations total${res.resetCurrent ? ' and reset currentLocation for all devices' : ''}.`);
+                      } catch (e: any) {
+                        // eslint-disable-next-line no-alert
+                        alert(`Gagal hapus semua data: ${e?.response?.data?.error || e?.message || 'Unknown error'}`);
+                      }
+                    }}
+                  >
+                    Clear ALL Data
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
+              <>
+                <Button size="small" variant="outlined" color="warning" disabled={!selectedId} onClick={async () => {
+                  if (!selectedId) return;
+                  const confirm = window.confirm('Hapus semua lokasi untuk device terpilih? OK: hapus + reset current, Cancel: hapus tanpa reset.');
+                  try {
+                    const res = await apiService.deleteDeviceLocations(selectedId, { resetCurrent: confirm });
+                    onRefresh && onRefresh();
+                    // eslint-disable-next-line no-alert
+                    alert(`Deleted ${res.deleted} locations${res.resetCurrent ? ' and reset currentLocation' : ''}.`);
+                  } catch (e: any) {
+                    // eslint-disable-next-line no-alert
+                    alert(`Gagal hapus locations: ${e?.response?.data?.error || e?.message || 'Unknown error'}`);
+                  }
+                }}>Clear Selected History</Button>
+                <Button size="small" variant="outlined" color="error" onClick={async () => {
+                  const proceed = window.confirm('ADMIN ONLY: Hapus SEMUA data lokasi untuk semua device? Klik OK untuk lanjut.');
+                  if (!proceed) return;
+                  const reset = window.confirm('Juga reset current location untuk semua device? OK untuk ya, Cancel untuk tidak.');
+                  try {
+                    const res = await apiService.deleteAllLocations({ resetCurrent: reset });
+                    onRefresh && onRefresh();
+                    // eslint-disable-next-line no-alert
+                    alert(`Deleted ${res.deleted} locations total${res.resetCurrent ? ' and reset currentLocation for all devices' : ''}.`);
+                  } catch (e: any) {
+                    // eslint-disable-next-line no-alert
+                    alert(`Gagal hapus semua data: ${e?.response?.data?.error || e?.message || 'Unknown error'}`);
+                  }
+                }}>Clear ALL Data</Button>
+              </>
+            )}
           </Stack>
         </Stack>
       </Box>

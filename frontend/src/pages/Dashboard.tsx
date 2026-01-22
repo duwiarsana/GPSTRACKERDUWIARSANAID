@@ -399,8 +399,8 @@ const DashboardPage: React.FC = () => {
             renderAuthNotice()
           ) : (
             <Stack spacing={1.5}>
-              <Paper elevation={0} sx={{ ...glassPanelSx, p: 1.5, position: 'sticky', top: 0, zIndex: 10 }}>
-                <Stack spacing={1.25}>
+              <Paper elevation={0} sx={{ ...glassPanelSx, p: 1.25, position: 'sticky', top: 0, zIndex: 10 }}>
+                <Stack spacing={1}>
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, letterSpacing: '0.02em' }}>
                       GPS Tracker
@@ -428,21 +428,28 @@ const DashboardPage: React.FC = () => {
                       }}
                     />
                     <Box sx={{ flexGrow: 1 }} />
-                    <Button size="small" variant="contained" color="secondary" disableElevation onClick={() => dispatch(logout())}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="secondary"
+                      disableElevation
+                      onClick={() => dispatch(logout())}
+                      sx={{ height: 34, px: 1.5, fontWeight: 800, textTransform: 'none' }}
+                    >
                       Logout
                     </Button>
                   </Stack>
 
-                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+                  <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexWrap: 'wrap' }}>
                     <FormControlLabel
-                      control={<Switch color="primary" checked={!latestOnly} onChange={(e) => setLatestOnly(!e.target.checked)} />}
-                      label={<Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: 11 }}>PATH</Typography>}
-                      sx={{ mr: 0 }}
+                      control={<Switch size="small" color="primary" checked={!latestOnly} onChange={(e) => setLatestOnly(!e.target.checked)} />}
+                      label={<Typography variant="button" sx={{ fontWeight: 800, letterSpacing: '0.08em', fontSize: 10 }}>PATH</Typography>}
+                      sx={{ mr: 0, ml: 0, '& .MuiFormControlLabel-label': { mt: 0.25 } }}
                     />
                     <FormControlLabel
-                      control={<Switch color="primary" checked={showAllDevices} onChange={(e) => setShowAllDevices(e.target.checked)} disabled={!latestOnly} />}
-                      label={<Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: 11 }}>ALL</Typography>}
-                      sx={{ mr: 0 }}
+                      control={<Switch size="small" color="primary" checked={showAllDevices} onChange={(e) => setShowAllDevices(e.target.checked)} disabled={!latestOnly} />}
+                      label={<Typography variant="button" sx={{ fontWeight: 800, letterSpacing: '0.08em', fontSize: 10 }}>ALL</Typography>}
+                      sx={{ mr: 0, ml: 0, '& .MuiFormControlLabel-label': { mt: 0.25 } }}
                     />
                   </Stack>
 
@@ -493,6 +500,7 @@ const DashboardPage: React.FC = () => {
                       variant="contained"
                       color="primary"
                       disableElevation
+                      sx={{ height: 36, fontWeight: 800, textTransform: 'none' }}
                       onClick={() => {
                         if (!map) return;
                         const indonesiaBounds = L.latLngBounds([[-11.0, 95.0], [6.5, 141.0]]);
@@ -507,6 +515,7 @@ const DashboardPage: React.FC = () => {
                       variant="contained"
                       startIcon={<HistoryIcon />}
                       disableElevation
+                      sx={{ height: 36, fontWeight: 800, textTransform: 'none' }}
                       onClick={handlePingDevice}
                       disabled={!cachedDevice && !selectedDevice}
                     >
