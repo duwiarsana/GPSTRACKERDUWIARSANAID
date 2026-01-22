@@ -545,7 +545,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                         <Typography
                           variant="caption"
                           color="text.secondary"
-                          sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap', fontSize: 12, lineHeight: 1.25 }}
+                          sx={{ display: { xs: 'none', sm: 'block' }, fontFamily: 'monospace', whiteSpace: 'nowrap', fontSize: 12, lineHeight: 1.25 }}
                         >
                           {latlngStr}
                         </Typography>

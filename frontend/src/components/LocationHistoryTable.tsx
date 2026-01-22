@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Stack, FormControlLabel, Switch } from '@mui/material';
+import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Stack, FormControlLabel, Switch, useMediaQuery } from '@mui/material';
 import type { Location } from '../types';
 import type { SxProps, Theme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import { format } from 'date-fns';
 import { API_URL } from '../services/api';
 
@@ -32,6 +33,8 @@ function formatDuration(ms: number): string {
 }
 
 const LocationHistoryTable: React.FC<LocationHistoryTableProps> = ({ locations, height = 360, containerSx }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const mergedSx: SxProps<Theme> = containerSx
     ? ([...(Array.isArray(containerSx) ? containerSx : [containerSx]), { overflow: 'hidden', height }] as SxProps<Theme>)
     : { overflow: 'hidden', height };
@@ -205,119 +208,184 @@ const LocationHistoryTable: React.FC<LocationHistoryTableProps> = ({ locations, 
         <Table stickyHeader size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
           <TableHead>
             <TableRow>
-              {showVisits
-                ? headers.map((header, idx) => (
+              {isMobile
+                ? ['#', 'Timestamp', 'Details'].map((header, idx) => (
                     <TableCell
                       key={header}
                       sx={{
                         fontWeight: 600,
                         whiteSpace: 'nowrap',
-                        width:
-                          idx === 0
-                            ? '5%'
-                            : idx === 1
-                              ? '23%'
-                              : idx === 2
-                                ? '14%'
-                                : idx === 3
-                                  ? '14%'
-                                  : idx === 4
-                                    ? '20%'
-                                    : '24%',
+                        width: idx === 0 ? '10%' : idx === 1 ? '35%' : '55%',
                       }}
                       align="left"
                     >
                       {header}
                     </TableCell>
                   ))
-                : ['#', 'Timestamp', 'Latitude', 'Longitude', 'Speed', 'Accuracy', 'Satellites'].map((header, idx) => (
-                    <TableCell
-                      key={header}
-                      sx={{
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                        width:
-                          idx === 0
-                            ? '6%'
-                            : idx === 1
-                              ? '30%'
-                              : idx === 2
-                                ? '16%'
-                                : idx === 3
-                                  ? '16%'
-                                  : idx === 4
-                                    ? '10%'
-                                    : idx === 5
-                                      ? '10%'
-                                      : '12%',
-                      }}
-                      align="left"
-                    >
-                      {header}
-                    </TableCell>
-                  ))}
+                : (showVisits
+                    ? headers.map((header, idx) => (
+                        <TableCell
+                          key={header}
+                          sx={{
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            width:
+                              idx === 0
+                                ? '5%'
+                                : idx === 1
+                                  ? '23%'
+                                  : idx === 2
+                                    ? '14%'
+                                    : idx === 3
+                                      ? '14%'
+                                      : idx === 4
+                                        ? '20%'
+                                        : '24%',
+                          }}
+                          align="left"
+                        >
+                          {header}
+                        </TableCell>
+                      ))
+                    : ['#', 'Timestamp', 'Latitude', 'Longitude', 'Speed', 'Accuracy', 'Satellites'].map((header, idx) => (
+                        <TableCell
+                          key={header}
+                          sx={{
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            width:
+                              idx === 0
+                                ? '6%'
+                                : idx === 1
+                                  ? '30%'
+                                  : idx === 2
+                                    ? '16%'
+                                    : idx === 3
+                                      ? '16%'
+                                      : idx === 4
+                                        ? '10%'
+                                        : idx === 5
+                                          ? '10%'
+                                          : '12%',
+                          }}
+                          align="left"
+                        >
+                          {header}
+                        </TableCell>
+                      )))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {showVisits ? (
-              visits.map((v, idx) => (
-                <TableRow key={`${v.start.toISOString()}_${idx}`} hover>
-                  <TableCell sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }} align="left">
-                    {idx + 1}
-                  </TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }} align="left">
-                    {format(v.start, 'PPpp')}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace' }} align="left">
-                    {v.centerLat.toFixed(6)}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace' }} align="left">
-                    {v.centerLng.toFixed(6)}
-                  </TableCell>
-                  <TableCell
-                    sx={{ maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                    align="left"
-                    title={addressCache[addressKeyFor(v.centerLat, v.centerLng)] || ''}
-                  >
-                    {addressLoading[addressKeyFor(v.centerLat, v.centerLng)]
-                      ? 'Loading...'
-                      : shortAddress(addressCache[addressKeyFor(v.centerLat, v.centerLng)] || 'Alamat tidak tersedia')}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace' }} align="left">
-                    {formatDuration(v.end.getTime() - v.start.getTime())}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              pointRows.map((loc, idx) => (
-                <TableRow key={`${loc.timestamp}_${idx}`} hover>
-                  <TableCell sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }} align="left">
-                    {idx + 1}
-                  </TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }} align="left">
-                    {format(new Date(loc.timestamp), 'PPpp')}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace' }} align="left">
-                    {(loc.location.coordinates as [number, number])[1].toFixed(6)}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace' }} align="left">
-                    {(loc.location.coordinates as [number, number])[0].toFixed(6)}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace' }} align="left">
-                    {typeof (loc as any).speed === 'number' ? `${(loc as any).speed.toFixed(1)}` : '-'}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace' }} align="left">
-                    {typeof (loc as any).accuracy === 'number' ? `${Math.round((loc as any).accuracy)}` : '-'}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace' }} align="left">
-                    {typeof (loc as any).satellites === 'number' ? `${(loc as any).satellites}` : '-'}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            {showVisits
+              ? visits.map((v, idx) => (
+                  <TableRow key={`${v.start.toISOString()}_${idx}`} hover>
+                    <TableCell sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }} align="left">
+                      {idx + 1}
+                    </TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }} align="left">
+                      {format(v.start, 'PPpp')}
+                    </TableCell>
+                    {isMobile ? (
+                      <TableCell
+                        align="left"
+                        sx={{
+                          whiteSpace: 'normal',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        <Stack spacing={0.25}>
+                          <Typography variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.2 }}>
+                            {v.centerLat.toFixed(6)}, {v.centerLng.toFixed(6)}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ lineHeight: 1.2 }}
+                            title={addressCache[addressKeyFor(v.centerLat, v.centerLng)] || ''}
+                          >
+                            {addressLoading[addressKeyFor(v.centerLat, v.centerLng)]
+                              ? 'Loading...'
+                              : shortAddress(addressCache[addressKeyFor(v.centerLat, v.centerLng)] || 'Alamat tidak tersedia')}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', lineHeight: 1.2 }}>
+                            {formatDuration(v.end.getTime() - v.start.getTime())}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                    ) : (
+                      <>
+                        <TableCell sx={{ fontFamily: 'monospace' }} align="left">
+                          {v.centerLat.toFixed(6)}
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace' }} align="left">
+                          {v.centerLng.toFixed(6)}
+                        </TableCell>
+                        <TableCell
+                          sx={{ maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          align="left"
+                          title={addressCache[addressKeyFor(v.centerLat, v.centerLng)] || ''}
+                        >
+                          {addressLoading[addressKeyFor(v.centerLat, v.centerLng)]
+                            ? 'Loading...'
+                            : shortAddress(addressCache[addressKeyFor(v.centerLat, v.centerLng)] || 'Alamat tidak tersedia')}
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace' }} align="left">
+                          {formatDuration(v.end.getTime() - v.start.getTime())}
+                        </TableCell>
+                      </>
+                    )}
+                  </TableRow>
+                ))
+              : pointRows.map((loc, idx) => {
+                  const lat = (loc.location.coordinates as [number, number])[1];
+                  const lng = (loc.location.coordinates as [number, number])[0];
+                  const spd = typeof (loc as any).speed === 'number' ? (loc as any).speed : null;
+                  const acc = typeof (loc as any).accuracy === 'number' ? (loc as any).accuracy : null;
+                  const sats = typeof (loc as any).satellites === 'number' ? (loc as any).satellites : null;
+                  return (
+                    <TableRow key={`${loc.timestamp}_${idx}`} hover>
+                      <TableCell sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }} align="left">
+                        {idx + 1}
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }} align="left">
+                        {format(new Date(loc.timestamp), 'PPpp')}
+                      </TableCell>
+                      {isMobile ? (
+                        <TableCell align="left" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                          <Stack spacing={0.25}>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.2 }}>
+                              {lat.toFixed(6)}, {lng.toFixed(6)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                              {`spd ${spd == null ? '-' : spd.toFixed(1)} · acc ${acc == null ? '-' : Math.round(acc)} · sat ${sats == null ? '-' : sats}`}
+                            </Typography>
+                          </Stack>
+                        </TableCell>
+                      ) : (
+                        <>
+                          <TableCell sx={{ fontFamily: 'monospace' }} align="left">
+                            {lat.toFixed(6)}
+                          </TableCell>
+                          <TableCell sx={{ fontFamily: 'monospace' }} align="left">
+                            {lng.toFixed(6)}
+                          </TableCell>
+                          <TableCell sx={{ fontFamily: 'monospace' }} align="left">
+                            {spd == null ? '-' : `${spd.toFixed(1)}`}
+                          </TableCell>
+                          <TableCell sx={{ fontFamily: 'monospace' }} align="left">
+                            {acc == null ? '-' : `${Math.round(acc)}`}
+                          </TableCell>
+                          <TableCell sx={{ fontFamily: 'monospace' }} align="left">
+                            {sats == null ? '-' : `${sats}`}
+                          </TableCell>
+                        </>
+                      )}
+                    </TableRow>
+                  );
+                })}
             {showVisits && !visits.length && (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={isMobile ? 3 : 6} align="center">
                   <Typography variant="body2" color="text.secondary" py={3}>
                     No visits detected yet for this device.
                   </Typography>
@@ -326,7 +394,7 @@ const LocationHistoryTable: React.FC<LocationHistoryTableProps> = ({ locations, 
             )}
             {!showVisits && !pointRows.length && (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={isMobile ? 3 : 7} align="center">
                   <Typography variant="body2" color="text.secondary" py={3}>
                     No locations recorded yet for this device.
                   </Typography>
