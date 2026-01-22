@@ -279,10 +279,10 @@ const LocationHistoryTable: React.FC<LocationHistoryTableProps> = ({ locations, 
             {showVisits
               ? visits.map((v, idx) => (
                   <TableRow key={`${v.start.toISOString()}_${idx}`} hover>
-                    <TableCell sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }} align="left">
+                    <TableCell sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap', py: isMobile ? 0.75 : undefined, verticalAlign: isMobile ? 'top' : undefined }} align="left">
                       {idx + 1}
                     </TableCell>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }} align="left">
+                    <TableCell sx={{ whiteSpace: 'nowrap', py: isMobile ? 0.75 : undefined, verticalAlign: isMobile ? 'top' : undefined }} align="left">
                       {format(v.start, 'PPpp')}
                     </TableCell>
                     {isMobile ? (
@@ -291,23 +291,25 @@ const LocationHistoryTable: React.FC<LocationHistoryTableProps> = ({ locations, 
                         sx={{
                           whiteSpace: 'normal',
                           wordBreak: 'break-word',
+                          py: 0.75,
+                          verticalAlign: 'top',
                         }}
                       >
-                        <Stack spacing={0.25}>
-                          <Typography variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.2 }}>
+                        <Stack spacing={0.5}>
+                          <Typography variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.35 }}>
                             {v.centerLat.toFixed(6)}, {v.centerLng.toFixed(6)}
                           </Typography>
                           <Typography
                             variant="caption"
                             color="text.secondary"
-                            sx={{ lineHeight: 1.2 }}
+                            sx={{ lineHeight: 1.35 }}
                             title={addressCache[addressKeyFor(v.centerLat, v.centerLng)] || ''}
                           >
                             {addressLoading[addressKeyFor(v.centerLat, v.centerLng)]
                               ? 'Loading...'
                               : shortAddress(addressCache[addressKeyFor(v.centerLat, v.centerLng)] || 'Alamat tidak tersedia')}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', lineHeight: 1.2 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', lineHeight: 1.35 }}>
                             {formatDuration(v.end.getTime() - v.start.getTime())}
                           </Typography>
                         </Stack>
@@ -344,19 +346,19 @@ const LocationHistoryTable: React.FC<LocationHistoryTableProps> = ({ locations, 
                   const sats = typeof (loc as any).satellites === 'number' ? (loc as any).satellites : null;
                   return (
                     <TableRow key={`${loc.timestamp}_${idx}`} hover>
-                      <TableCell sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }} align="left">
+                      <TableCell sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap', py: isMobile ? 0.75 : undefined, verticalAlign: isMobile ? 'top' : undefined }} align="left">
                         {idx + 1}
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }} align="left">
+                      <TableCell sx={{ whiteSpace: 'nowrap', py: isMobile ? 0.75 : undefined, verticalAlign: isMobile ? 'top' : undefined }} align="left">
                         {format(new Date(loc.timestamp), 'PPpp')}
                       </TableCell>
                       {isMobile ? (
-                        <TableCell align="left" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          <Stack spacing={0.25}>
-                            <Typography variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.2 }}>
+                        <TableCell align="left" sx={{ whiteSpace: 'normal', wordBreak: 'break-word', py: 0.75, verticalAlign: 'top' }}>
+                          <Stack spacing={0.5}>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.35 }}>
                               {lat.toFixed(6)}, {lng.toFixed(6)}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.35 }}>
                               {`spd ${spd == null ? '-' : spd.toFixed(1)} · acc ${acc == null ? '-' : Math.round(acc)} · sat ${sats == null ? '-' : sats}`}
                             </Typography>
                           </Stack>

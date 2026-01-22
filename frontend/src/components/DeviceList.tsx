@@ -552,20 +552,20 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                       )}
                     </Stack>
 
-                    <Stack direction="row" alignItems="flex-start" sx={{ width: '100%' }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} sx={{ width: '100%' }} spacing={{ xs: 0.25, sm: 0 }}>
                       <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.15 }}>
                         Device ID: {device.deviceId}
                       </Typography>
-                      <Box sx={{ flexGrow: 1 }} />
+                      <Box sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }} />
                       {(addr || addrBusy || (showPath && id === selectedId)) && (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', sm: 'flex-end' }, textAlign: { xs: 'left', sm: 'right' }, width: { xs: '100%', sm: 'auto' } }}>
                           {addr && (
                             <Typography
                               variant="caption"
                               color="text.secondary"
                               title={addr}
                               sx={{
-                                maxWidth: 360,
+                                maxWidth: { xs: '100%', sm: 360 },
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
@@ -598,11 +598,11 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                 primaryTypographyProps={{ component: 'div' }}
                 secondary={
                   <Stack spacing={0.25} sx={{ mt: 0.25 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.75, sm: 1.5 } }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, lineHeight: 1.2 }}>
                         Last seen {lastSeen}
                       </Typography>
-                      <Stack direction="row" spacing={1.25} alignItems="center">
+                      <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5, columnGap: 1.25, justifyContent: { xs: 'flex-start', sm: 'flex-end' }, width: { xs: '100%', sm: 'auto' } }}>
                         {/* Speed */}
                         <Stack direction="row" spacing={0.5} alignItems="center">
                           <SpeedRounded fontSize="small" color="action" />
@@ -661,6 +661,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                               event.stopPropagation();
                               handleOpenGeofence(device);
                             }}
+                            sx={{ ml: { xs: 0, sm: 0.25 } }}
                           >
                             <AddLocationAltRounded fontSize="small" />
                           </IconButton>
@@ -673,6 +674,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                               event.stopPropagation();
                               handleRequestDelete(device);
                             }}
+                            sx={{ ml: { xs: 0, sm: 0.25 } }}
                           >
                             <DeleteOutlineRounded fontSize="small" />
                           </IconButton>
