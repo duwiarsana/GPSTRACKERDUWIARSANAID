@@ -38,8 +38,29 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: 'background.default', p: 2, position: 'relative' }}>
-      <Paper elevation={0} sx={{ width: 420, p: 5, borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)' }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'background.default',
+        p: 2,
+        position: 'relative',
+        '@supports (height: 100dvh)': { minHeight: '100dvh' },
+        '@supports (height: 100svh)': { minHeight: '100svh' },
+      }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          width: '100%',
+          maxWidth: 420,
+          p: { xs: 3, sm: 5 },
+          borderRadius: { xs: 3, sm: 4 },
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}
+      >
         <Stack spacing={3} component="form" onSubmit={handleSubmit}>
           <Stack spacing={0.5} textAlign="center">
             <Typography variant="h5" fontWeight={700}>GPS Tracker</Typography>
@@ -74,7 +95,7 @@ const LoginPage: React.FC = () => {
           </Button>
         </Stack>
       </Paper>
-      <Box sx={{ position: 'absolute', bottom: 12, left: 16, opacity: 0.8 }}>
+      <Box sx={{ position: 'absolute', bottom: 12, left: 16, opacity: 0.8, display: { xs: 'none', sm: 'block' } }}>
         <Typography variant="caption" color="text.secondary">© duwiarsana {new Date().getFullYear()}</Typography>
       </Box>
     </Box>

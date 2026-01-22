@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Box, Container, Stack, Typography, Paper, Button, Chip, Divider, Skeleton, IconButton, Tooltip, Slide, FormControlLabel, Switch, TextField, useMediaQuery, Tabs, Tab } from '@mui/material';
+import { Box, Container, Stack, Typography, Paper, Button, Chip, Divider, Skeleton, IconButton, Tooltip, Slide, FormControlLabel, Switch, TextField, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import L from 'leaflet';
 import DevicesOtherIcon from '@mui/icons-material/DevicesOther';
@@ -56,7 +56,6 @@ const DashboardPage: React.FC = () => {
   const [dateStr, setDateStr] = useState<string | null>(null); // YYYY-MM-DD
   const [fromTimeStr, setFromTimeStr] = useState<string | null>(null); // HH:MM
   const [toTimeStr, setToTimeStr] = useState<string | null>(null); // HH:MM
-  const [mobileTab, setMobileTab] = useState<number>(0);
 
   const normalizeDate = useCallback((d: string | null): string | null => {
     const raw = String(d ?? '').trim();
@@ -509,37 +508,7 @@ const DashboardPage: React.FC = () => {
                     >
                       Reset
                     </Button>
-                    <Button
-                      fullWidth
-                      size="small"
-                      variant="contained"
-                      startIcon={<HistoryIcon />}
-                      disableElevation
-                      sx={{ height: 36, fontWeight: 800, textTransform: 'none' }}
-                      onClick={handlePingDevice}
-                      disabled={!cachedDevice && !selectedDevice}
-                    >
-                      Ping
-                    </Button>
                   </Stack>
-
-                  <Paper elevation={0} sx={{ mt: 0.5, borderRadius: 2, overflow: 'hidden', bgcolor: 'transparent' }}>
-                    <Tabs
-                      value={mobileTab}
-                      onChange={(_, v) => setMobileTab(v)}
-                      variant="fullWidth"
-                      textColor="primary"
-                      indicatorColor="primary"
-                      sx={{
-                        minHeight: 40,
-                        '& .MuiTab-root': { minHeight: 40, fontWeight: 800, letterSpacing: '0.06em', fontSize: 11 },
-                      }}
-                    >
-                      <Tab label="Devices" />
-                      <Tab label="History" />
-                      <Tab label="Stats" />
-                    </Tabs>
-                  </Paper>
                 </Stack>
               </Paper>
 
@@ -572,51 +541,17 @@ const DashboardPage: React.FC = () => {
                 </Box>
               </Paper>
 
-              {mobileTab === 0 && (
-                <DeviceList
-                  devices={devices}
-                  selectedId={selectedDeviceId}
-                  onSelect={(id) => handleSelectDevice(id)}
-                  loading={deviceLoading && devices.length === 0}
-                  containerSx={glassPanelSx}
-                  onRefresh={() => dispatch(fetchDevices())}
-                  showPath={!latestOnly}
-                  pathDistanceKm={tripDistanceKm}
-                  pathDistanceLoading={locationsState.loading}
-                />
-              )}
-
-              {mobileTab === 1 && (
-                <LocationHistoryTable locations={locations} containerSx={glassPanelSx} />
-              )}
-
-              {mobileTab === 2 && (
-                <Stack spacing={1.5}>
-                  {metricsRow}
-                  <Paper sx={{ ...glassPanelSx, p: 2 }}>
-                    <Stack spacing={1.5}>
-                      <Stack spacing={0.5}>
-                        <Typography variant="subtitle2" color="text.secondary">Last Update</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 400 }}>
-                          {cachedStats.lastUpdate ? new Date(cachedStats.lastUpdate).toLocaleString() : '-'}
-                        </Typography>
-                      </Stack>
-                      <Stack spacing={0.5}>
-                        <Typography variant="subtitle2" color="text.secondary">Average Speed</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 400 }}>
-                          {cachedStats.avgSpeed ? `${cachedStats.avgSpeed.toFixed(1)} km/h` : '-'}
-                        </Typography>
-                      </Stack>
-                      <Stack spacing={0.5}>
-                        <Typography variant="subtitle2" color="text.secondary">Max Speed</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 400 }}>
-                          {cachedStats.maxSpeed ? `${cachedStats.maxSpeed.toFixed(1)} km/h` : '-'}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </Paper>
-                </Stack>
-              )}
+              <DeviceList
+                devices={devices}
+                selectedId={selectedDeviceId}
+                onSelect={(id) => handleSelectDevice(id)}
+                loading={deviceLoading && devices.length === 0}
+                containerSx={glassPanelSx}
+                onRefresh={() => dispatch(fetchDevices())}
+                showPath={!latestOnly}
+                pathDistanceKm={tripDistanceKm}
+                pathDistanceLoading={locationsState.loading}
+              />
 
               {deviceError && (
                 <Paper sx={{ ...glassPanelSx, p: 2 }}>

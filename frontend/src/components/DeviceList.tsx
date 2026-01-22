@@ -1,4 +1,4 @@
-import { Paper, List, ListItemButton, ListItemAvatar, Avatar, ListItemText, Chip, Stack, Typography, CircularProgress, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, IconButton, Tooltip, Pagination, Menu, MenuItem, useMediaQuery } from '@mui/material';
+import { Paper, List, ListItemButton, ListItemAvatar, Avatar, ListItemText, Chip, Stack, Typography, CircularProgress, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, IconButton, Tooltip, Pagination, useMediaQuery } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useTheme } from '@mui/material/styles';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
@@ -15,7 +15,6 @@ import BatteryFullRounded from '@mui/icons-material/BatteryFullRounded';
 import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
 import AddLocationAltRounded from '@mui/icons-material/AddLocationAltRounded';
 import EditRounded from '@mui/icons-material/EditRounded';
-import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import type { Device } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -50,9 +49,6 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const pageSize = 5;
-
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const menuOpen = Boolean(menuAnchorEl);
 
   const [addressCache, setAddressCache] = useState<Record<string, string>>({});
   const [addressLoading, setAddressLoading] = useState<Record<string, boolean>>({});
@@ -326,7 +322,11 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
             </Typography>
             <Stack direction="row" spacing={1} alignItems="center">
               <Chip label={`0 total`} size="small" color="primary" variant="outlined" />
-              <Button size="small" variant="contained" onClick={() => setOpen(true)}>Add Device</Button>
+              {!isMobile && (
+                <Button size="small" variant="contained" onClick={() => setOpen(true)}>
+                  Add Device
+                </Button>
+              )}
             </Stack>
           </Stack>
         </Box>
@@ -404,64 +404,12 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                 hideNextButton
               />
             )}
-            <Button size="small" variant="contained" onClick={() => setOpen(true)}>
-              Add Device
-            </Button>
-            {isMobile ? (
-              <>
-                <Tooltip title="More">
-                  <IconButton size="small" onClick={(e) => setMenuAnchorEl(e.currentTarget)}>
-                    <MoreVertRounded fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Menu
-                  anchorEl={menuAnchorEl}
-                  open={menuOpen}
-                  onClose={() => setMenuAnchorEl(null)}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                >
-                  <MenuItem
-                    disabled={!selectedId}
-                    onClick={async () => {
-                      setMenuAnchorEl(null);
-                      if (!selectedId) return;
-                      const confirm = window.confirm('Hapus semua lokasi untuk device terpilih? OK: hapus + reset current, Cancel: hapus tanpa reset.');
-                      try {
-                        const res = await apiService.deleteDeviceLocations(selectedId, { resetCurrent: confirm });
-                        onRefresh && onRefresh();
-                        // eslint-disable-next-line no-alert
-                        alert(`Deleted ${res.deleted} locations${res.resetCurrent ? ' and reset currentLocation' : ''}.`);
-                      } catch (e: any) {
-                        // eslint-disable-next-line no-alert
-                        alert(`Gagal hapus locations: ${e?.response?.data?.error || e?.message || 'Unknown error'}`);
-                      }
-                    }}
-                  >
-                    Clear Selected History
-                  </MenuItem>
-                  <MenuItem
-                    onClick={async () => {
-                      setMenuAnchorEl(null);
-                      const proceed = window.confirm('ADMIN ONLY: Hapus SEMUA data lokasi untuk semua device? Klik OK untuk lanjut.');
-                      if (!proceed) return;
-                      const reset = window.confirm('Juga reset current location untuk semua device? OK untuk ya, Cancel untuk tidak.');
-                      try {
-                        const res = await apiService.deleteAllLocations({ resetCurrent: reset });
-                        onRefresh && onRefresh();
-                        // eslint-disable-next-line no-alert
-                        alert(`Deleted ${res.deleted} locations total${res.resetCurrent ? ' and reset currentLocation for all devices' : ''}.`);
-                      } catch (e: any) {
-                        // eslint-disable-next-line no-alert
-                        alert(`Gagal hapus semua data: ${e?.response?.data?.error || e?.message || 'Unknown error'}`);
-                      }
-                    }}
-                  >
-                    Clear ALL Data
-                  </MenuItem>
-                </Menu>
-              </>
-            ) : (
+            {!isMobile && (
+              <Button size="small" variant="contained" onClick={() => setOpen(true)}>
+                Add Device
+              </Button>
+            )}
+            {!isMobile && (
               <>
                 <Button size="small" variant="outlined" color="warning" disabled={!selectedId} onClick={async () => {
                   if (!selectedId) return;
@@ -587,19 +535,21 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                       <Typography variant="body1" fontWeight={600} sx={{ lineHeight: 1.2 }}>
                         {device.name}
                       </Typography>
-                      <Tooltip title="Edit device">
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleOpenEdit(device);
-                          }}
-                          sx={{ ml: 0.25 }}
-                        >
-                          <EditRounded fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {!isMobile && (
+                        <Tooltip title="Edit device">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleOpenEdit(device);
+                            }}
+                            sx={{ ml: 0.25 }}
+                          >
+                            <EditRounded fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       <Chip
                         size="small"
                         label={device.isActive ? 'Active' : 'Inactive'}
@@ -624,7 +574,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                         Device ID: {device.deviceId}
                       </Typography>
                       <Box sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }} />
-                      {(addr || addrBusy || (showPath && id === selectedId)) && (
+                      {!isMobile && (addr || addrBusy) && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', sm: 'flex-end' }, textAlign: { xs: 'left', sm: 'right' }, width: { xs: '100%', sm: 'auto' } }}>
                           {addr && (
                             <Typography
@@ -650,107 +600,26 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                               Mengambil alamat…
                             </Typography>
                           )}
-                          {showPath && id === selectedId ? (
-                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25, lineHeight: 1.25 }}>
-                              {pathDistanceLoading
-                                ? 'Jarak: ...'
-                                : `Jarak: ${(typeof pathDistanceKm === 'number' && isFinite(pathDistanceKm) ? pathDistanceKm : 0).toFixed(2)} km`}
-                            </Typography>
-                          ) : null}
                         </Box>
                       )}
+
+                      {showPath && id === selectedId ? (
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25, lineHeight: 1.25 }}>
+                          {pathDistanceLoading
+                            ? 'Jarak: ...'
+                            : `Jarak: ${(typeof pathDistanceKm === 'number' && isFinite(pathDistanceKm) ? pathDistanceKm : 0).toFixed(2)} km`}
+                        </Typography>
+                      ) : null}
                     </Stack>
                   </Stack>
                 }
                 primaryTypographyProps={{ component: 'div' }}
                 secondary={
                   isMobile ? (
-                    <Stack spacing={0.75} sx={{ mt: 0.5 }}>
+                    <Stack spacing={0.25} sx={{ mt: 0.5 }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, lineHeight: 1.2 }}>
                         Last seen {lastSeen}
                       </Typography>
-
-                      <Box
-                        sx={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                          gap: 0.75,
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
-                          <SpeedRounded sx={{ fontSize: 16 }} color="action" />
-                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                            {device.isActive && typeof device.currentLocation?.speed === 'number' ? `${device.currentLocation.speed.toFixed(1)}` : '-'}
-                          </Typography>
-                        </Stack>
-                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
-                          <SatelliteAltRounded sx={{ fontSize: 16 }} color="action" />
-                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                            {device.isActive && typeof device.currentLocation?.satellites === 'number' ? `${device.currentLocation.satellites}` : '-'}
-                          </Typography>
-                        </Stack>
-                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
-                          <HeightRounded sx={{ fontSize: 16 }} color="action" />
-                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                            {device.isActive && typeof device.currentLocation?.altitude === 'number'
-                              ? `${Number(device.currentLocation.altitude).toFixed(0)}m`
-                              : '-'}
-                          </Typography>
-                        </Stack>
-                        {(() => {
-                          const active = !!device.isActive;
-                          const level = active && typeof device.currentLocation?.battery?.level === 'number' ? Math.round(device.currentLocation.battery.level) : null;
-                          const charging = active && !!device.currentLocation?.battery?.isCharging;
-                          const color = !active || level == null ? 'text.secondary' : level < 20 ? 'error.main' : level < 50 ? 'warning.main' : 'success.main';
-                          const Icon = (() => {
-                            if (charging) return BatteryChargingFullRounded;
-                            if (level == null) return Battery4BarRounded;
-                            if (level < 5) return Battery0BarRounded;
-                            if (level < 25) return Battery2BarRounded;
-                            if (level < 60) return Battery4BarRounded;
-                            if (level < 85) return Battery6BarRounded;
-                            return BatteryFullRounded;
-                          })();
-                          return (
-                            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
-                              <Box sx={{ color }}>
-                                <Icon sx={{ fontSize: 16 }} />
-                              </Box>
-                              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                                {level == null ? '-' : `${level}%${charging ? '⚡' : ''}`}
-                              </Typography>
-                            </Stack>
-                          );
-                        })()}
-                      </Box>
-
-                      <Stack direction="row" spacing={0.5} justifyContent="flex-end" sx={{ pt: 0.25 }}>
-                        <Tooltip title="Edit geofence">
-                          <IconButton
-                            size="small"
-                            color="warning"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleOpenGeofence(device);
-                            }}
-                          >
-                            <AddLocationAltRounded fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete device">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleRequestDelete(device);
-                            }}
-                          >
-                            <DeleteOutlineRounded fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
                     </Stack>
                   ) : (
                     <Stack spacing={0.25} sx={{ mt: 0.25 }}>
