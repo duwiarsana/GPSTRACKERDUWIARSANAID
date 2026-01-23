@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Paper, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { MapContainer, TileLayer, useMap, Polyline, CircleMarker, Tooltip, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap, Polyline, CircleMarker, Tooltip, ZoomControl, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MapView.css';
@@ -551,13 +551,16 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                     radius={isActiveMarker ? 10 : 8}
                     pathOptions={{ color: '#000000', weight: isActiveMarker ? 3 : 2, fillColor: color, fillOpacity: 1 }}
                     eventHandlers={{
-                      mouseover: () => ensureAddress(lat, lng),
                       click: () => {
+                        ensureAddress(lat, lng);
                         if (onSelectDevice && canonicalId) onSelectDevice(canonicalId);
                       },
                     }}
                   >
-                    <Tooltip className="glass-tooltip" direction="top" offset={[0, -8]} opacity={1} sticky>
+                    <Tooltip className="device-label" direction="top" offset={[0, -10]} opacity={1} permanent>
+                      {d?.name || 'Device'}
+                    </Tooltip>
+                    <Popup className="glass-popup" closeButton={false} autoPan={true} maxWidth={320}>
                       <div style={{
                         padding: 8,
                         borderRadius: 12,
@@ -585,7 +588,7 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                           <div style={{ marginTop: 4, fontSize: 11, lineHeight: 1.4 }}>Mengambil alamat…</div>
                         )}
                       </div>
-                    </Tooltip>
+                    </Popup>
                   </CircleMarker>
                 );
               })}
@@ -621,10 +624,13 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                 radius={8}
                 pathOptions={{ color: '#000000', weight: 2, fillColor: color, fillOpacity: 1 }}
                 eventHandlers={{
-                  mouseover: () => ensureAddress(lat, lng),
+                  click: () => ensureAddress(lat, lng),
                 }}
               >
-                <Tooltip className="glass-tooltip" direction="top" offset={[0, -8]} opacity={1} sticky>
+                <Tooltip className="device-label" direction="top" offset={[0, -10]} opacity={1} permanent>
+                  {device?.name || 'Device'}
+                </Tooltip>
+                <Popup className="glass-popup" closeButton={false} autoPan={true} maxWidth={320}>
                   <div style={{
                     padding: 8,
                     borderRadius: 12,
@@ -636,23 +642,23 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                     WebkitBackdropFilter: 'blur(8px)'
                   }}>
                     <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{device?.name || 'Device'}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SpeedRounded sx={{ fontSize: 16 }} />{typeof speed === 'number' ? `${speed.toFixed(1)} km/h` : '-'}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SatelliteAltRounded sx={{ fontSize: 16 }} />{typeof sats === 'number' ? sats : '-'}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <BatteryIcon sx={{ fontSize: 16, color: batteryColor }} />
-                      <span style={{ color: typeof batteryColor === 'string' ? undefined : undefined }}>{batteryStr}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SpeedRounded sx={{ fontSize: 16 }} />{typeof speed === 'number' ? `${speed.toFixed(1)} km/h` : '-'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SatelliteAltRounded sx={{ fontSize: 16 }} />{typeof sats === 'number' ? sats : '-'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <BatteryIcon sx={{ fontSize: 16, color: batteryColor }} />
+                        <span style={{ color: typeof batteryColor === 'string' ? undefined : undefined }}>{batteryStr}</span>
+                      </div>
                     </div>
+                    <div style={{ marginTop: 4, fontFamily: 'monospace' }}>{lat.toFixed(6)}, {lng.toFixed(6)}</div>
+                    {addr && (
+                      <div className="map-tooltip-address" title={addr} style={{ marginTop: 4, fontSize: 11, lineHeight: 1.4 }}>{shortAddress(addr)}</div>
+                    )}
+                    {!addr && addrBusy && (
+                      <div style={{ marginTop: 4, fontSize: 11, lineHeight: 1.4 }}>Mengambil alamat…</div>
+                    )}
                   </div>
-                  <div style={{ marginTop: 4, fontFamily: 'monospace' }}>{lat.toFixed(6)}, {lng.toFixed(6)}</div>
-                  {addr && (
-                    <div className="map-tooltip-address" title={addr} style={{ marginTop: 4, fontSize: 11, lineHeight: 1.4 }}>{shortAddress(addr)}</div>
-                  )}
-                  {!addr && addrBusy && (
-                    <div style={{ marginTop: 4, fontSize: 11, lineHeight: 1.4 }}>Mengambil alamat…</div>
-                  )}
-                  </div>
-                </Tooltip>
+                </Popup>
               </CircleMarker>
             );
           })()
