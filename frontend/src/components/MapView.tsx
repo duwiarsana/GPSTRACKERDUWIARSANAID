@@ -28,6 +28,7 @@ interface MapViewProps {
   showAllDevices?: boolean;
   autoFit?: boolean;
   onMapReady?: (map: L.Map) => void;
+  onSelectDevice?: (deviceId: string) => void;
   from?: Date | string | null;
   to?: Date | string | null;
   statsLatest?: any | null;
@@ -60,7 +61,7 @@ const PersistView: React.FC<{ onReady?: (map: L.Map) => void }> = ({ onReady }) 
   return null;
 };
 
-const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 420, bare = false, latestOnly = true, showAllDevices = false, autoFit = false, onMapReady, from, to, statsLatest = null, forceTick, activeId, allowCacheLatest = false, geofence = null }) => {
+const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 420, bare = false, latestOnly = true, showAllDevices = false, autoFit = false, onMapReady, onSelectDevice, from, to, statsLatest = null, forceTick, activeId, allowCacheLatest = false, geofence = null }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   // Load persisted view
@@ -519,6 +520,8 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                 if (!n) return null;
                 const [lng, lat] = n;
                 if (!isInBoundsID(lat, lng)) return null;
+                const canonicalId = String((d as any)?.id || (d as any)?._id || d.deviceId || '');
+                const isActiveMarker = !!activeId && canonicalId && canonicalId === activeId;
                 const online = !!d.isActive;
                 const color = colorFor(lng, lat, online);
                 const speed = online ? (d as any)?.currentLocation?.speed : undefined;
@@ -542,12 +545,15 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                 })();
                 return (
                   <CircleMarker
-                    key={(d as any)._id || d.deviceId || d.name}
+                    key={(d as any)._id || (d as any).id || d.deviceId || d.name}
                     center={[lat, lng]}
-                    radius={8}
-                    pathOptions={{ color: '#000000', weight: 2, fillColor: color, fillOpacity: 1 }}
+                    radius={isActiveMarker ? 10 : 8}
+                    pathOptions={{ color: '#000000', weight: isActiveMarker ? 3 : 2, fillColor: color, fillOpacity: 1 }}
                     eventHandlers={{
                       mouseover: () => ensureAddress(lat, lng),
+                      click: () => {
+                        if (onSelectDevice && canonicalId) onSelectDevice(canonicalId);
+                      },
                     }}
                   >
                     <Tooltip className="glass-tooltip" direction="top" offset={[0, -8]} opacity={1} sticky>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Box, Container, Stack, Typography, Paper, Button, Chip, Divider, Skeleton, IconButton, Tooltip, Slide, FormControlLabel, Switch, TextField, useMediaQuery } from '@mui/material';
+import { Box, Container, Stack, Typography, Paper, Button, Chip, Divider, Skeleton, IconButton, Tooltip, Slide, FormControlLabel, Switch, TextField, useMediaQuery, SwipeableDrawer, List, ListItemButton, ListItemAvatar, ListItemText, Avatar } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import L from 'leaflet';
 import DevicesOtherIcon from '@mui/icons-material/DevicesOther';
@@ -7,6 +7,10 @@ import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import HistoryIcon from '@mui/icons-material/History';
 import MapIcon from '@mui/icons-material/Map';
+import TuneIcon from '@mui/icons-material/Tune';
+import LayersIcon from '@mui/icons-material/Layers';
+import AltRouteIcon from '@mui/icons-material/AltRoute';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
@@ -53,6 +57,8 @@ const DashboardPage: React.FC = () => {
   const [panelsVisible, setPanelsVisible] = useState<boolean>(true);
   const [latestOnly, setLatestOnly] = useState<boolean>(true);
   const [showAllDevices, setShowAllDevices] = useState<boolean>(false);
+  const [devicesOpen, setDevicesOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [dateStr, setDateStr] = useState<string | null>(null); // YYYY-MM-DD
   const [fromTimeStr, setFromTimeStr] = useState<string | null>(null); // HH:MM
   const [toTimeStr, setToTimeStr] = useState<string | null>(null); // HH:MM
@@ -391,66 +397,251 @@ const DashboardPage: React.FC = () => {
   };
 
   if (isMobile) {
+    const headerDevice = (cachedDevice || selectedDevice) as any;
+    const headerOnline = !!headerDevice?.isActive;
+    const headerTitle = headerDevice?.name || 'GPS Tracker';
+    const headerSub = headerDevice?.deviceId || '';
+
+    const handleToggleHistory = () => {
+      setLatestOnly((prev) => {
+        const next = !prev;
+        if (!next) {
+          setShowAllDevices(false);
+        }
+        return next;
+      });
+    };
+
+    const handleToggleAllDevices = () => {
+      setShowAllDevices((prev) => {
+        const next = !prev;
+        if (next) {
+          setLatestOnly(true);
+        }
+        return next;
+      });
+    };
+
+    const handleRecenter = () => {
+      if (!map) return;
+      try {
+        if (showAllDevices) {
+          const indonesiaBounds = L.latLngBounds([[-11.0, 95.0], [6.5, 141.0]]);
+          map.fitBounds(indonesiaBounds, { padding: [24, 24] });
+          return;
+        }
+
+        const coords = (headerDevice as any)?.currentLocation?.coordinates as [number, number] | undefined;
+        if (coords && coords.length >= 2 && isFinite(coords[0]) && isFinite(coords[1])) {
+          const latlng: [number, number] = [coords[1], coords[0]];
+          const targetZoom = Math.max(map.getZoom() || 0, 13);
+          map.flyTo(latlng, targetZoom, { duration: 0.8 });
+        }
+      } catch {}
+    };
+
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        <Container maxWidth="sm" sx={{ pt: 1.5, pb: 2 }}>
-          {!isAuthenticated ? (
-            renderAuthNotice()
-          ) : (
-            <Stack spacing={1.5}>
-              <Paper elevation={0} sx={{ ...glassPanelSx, p: 1.25, position: 'sticky', top: 0, zIndex: 10 }}>
-                <Stack spacing={1}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800, letterSpacing: '0.02em' }}>
-                      GPS Tracker
+      <Box
+        sx={{
+          position: 'relative',
+          height: '100vh',
+          bgcolor: 'background.default',
+          '@supports (height: 100dvh)': { height: '100dvh' },
+          '@supports (height: 100svh)': { height: '100svh' },
+        }}
+      >
+        {!isAuthenticated ? (
+          <Container maxWidth="sm" sx={{ pt: 1.5, pb: 2 }}>
+            {renderAuthNotice()}
+          </Container>
+        ) : (
+          <>
+            <Box sx={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+              <MapView
+                device={selectedDevice}
+                devices={devices as unknown as Device[]}
+                locations={locations}
+                height="100%"
+                bare
+                latestOnly={latestOnly}
+                showAllDevices={showAllDevices}
+                onMapReady={handleMapReady}
+                from={pathFrom}
+                to={pathTo}
+                statsLatest={(stats as any)?.deviceId === selectedDeviceId ? (stats as any)?.latestLocation ?? null : null}
+                forceTick={forceTick}
+                activeId={selectedDeviceId}
+                geofence={geofence}
+                onSelectDevice={(id) => {
+                  handleSelectDevice(id);
+                  setDevicesOpen(false);
+                }}
+              />
+              {locationsState.loading && (
+                <Skeleton
+                  variant="rectangular"
+                  width="100%"
+                  height="100%"
+                  sx={{ position: 'absolute', inset: 0, zIndex: 0, opacity: 0.35, transition: 'opacity 200ms ease', willChange: 'opacity' }}
+                />
+              )}
+            </Box>
+
+            <Box sx={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
+              <Box sx={{ position: 'absolute', top: 12, left: 12, right: 12, display: 'flex', alignItems: 'center', gap: 1.25, pointerEvents: 'auto' }}>
+                <Paper elevation={0} sx={{ ...glassPanelSx, px: 1.25, py: 0.75, borderRadius: 999, flexGrow: 1, minWidth: 0 }}>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
+                    <Box sx={{ width: 9, height: 9, borderRadius: 999, bgcolor: headerOnline ? 'success.main' : 'warning.main' }} />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+                      {headerTitle}
                     </Typography>
-                    <Box sx={{ flexGrow: 1 }} />
-                    <Chip
-                      label={(cachedDevice || selectedDevice)?.isActive ? 'Online' : 'Offline'}
-                      color={(cachedDevice || selectedDevice)?.isActive ? 'success' : 'warning'}
-                      size="small"
-                      sx={{ fontWeight: 700 }}
-                    />
+                    {headerSub ? (
+                      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                        {headerSub}
+                      </Typography>
+                    ) : null}
                   </Stack>
+                </Paper>
+                <Paper elevation={0} sx={{ ...glassPanelSx, borderRadius: 999 }}>
+                  <Tooltip title="Settings">
+                    <IconButton size="small" onClick={() => setSettingsOpen(true)}>
+                      <TuneIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
+              </Box>
 
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Chip
-                      icon={<SatelliteAltIcon />}
-                      label={(cachedDevice || selectedDevice)?.deviceId || '-'}
-                      color={(cachedDevice || selectedDevice)?.isActive ? 'success' : 'warning'}
-                      variant="filled"
-                      size="small"
-                      sx={{
-                        fontWeight: 700,
-                        bgcolor: (t) => (cachedDevice || selectedDevice)?.isActive ? t.palette.success.main : t.palette.warning.main,
-                        color: (t) => t.palette.getContrastText((cachedDevice || selectedDevice)?.isActive ? t.palette.success.main : t.palette.warning.main),
+              <Box sx={{ position: 'absolute', right: 12, bottom: 12, display: 'flex', flexDirection: 'column', gap: 1, pointerEvents: 'auto' }}>
+                <Paper elevation={0} sx={{ ...glassPanelSx, borderRadius: 999 }}>
+                  <Tooltip title="Recenter">
+                    <IconButton size="small" onClick={handleRecenter}>
+                      <MyLocationIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
+                <Paper elevation={0} sx={{ ...glassPanelSx, borderRadius: 999 }}>
+                  <Tooltip title="Devices">
+                    <IconButton size="small" onClick={() => setDevicesOpen(true)}>
+                      <DevicesOtherIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
+                <Paper elevation={0} sx={{ ...glassPanelSx, borderRadius: 999, borderColor: showAllDevices ? 'rgba(37,99,235,0.35)' : undefined }}>
+                  <Tooltip title="Show all devices">
+                    <IconButton size="small" color={showAllDevices ? 'primary' : 'default'} onClick={handleToggleAllDevices} disabled={!latestOnly}>
+                      <LayersIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
+                <Paper elevation={0} sx={{ ...glassPanelSx, borderRadius: 999, borderColor: !latestOnly ? 'rgba(37,99,235,0.35)' : undefined }}>
+                  <Tooltip title="History / Path">
+                    <IconButton size="small" color={!latestOnly ? 'primary' : 'default'} onClick={handleToggleHistory}>
+                      <AltRouteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
+              </Box>
+
+              {deviceError && (
+                <Box sx={{ position: 'absolute', left: 12, right: 12, bottom: 82, pointerEvents: 'auto' }}>
+                  <Paper elevation={0} sx={{ ...glassPanelSx, p: 1.25 }}>
+                    <Typography variant="caption" color="error">
+                      {deviceError}
+                    </Typography>
+                  </Paper>
+                </Box>
+              )}
+            </Box>
+
+            <SwipeableDrawer
+              anchor="bottom"
+              open={devicesOpen}
+              onClose={() => setDevicesOpen(false)}
+              onOpen={() => setDevicesOpen(true)}
+              disableSwipeToOpen
+              PaperProps={{ sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16 } }}
+            >
+              <Box sx={{ px: 2, pt: 1.25, pb: 1 }}>
+                <Box sx={{ width: 36, height: 4, borderRadius: 999, bgcolor: 'rgba(0,0,0,0.15)', mx: 'auto', mb: 1 }} />
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 900 }}>
+                    Devices
+                  </Typography>
+                  <Box sx={{ flexGrow: 1 }} />
+                  <Chip label={`${devices.length}`} size="small" variant="outlined" />
+                </Stack>
+              </Box>
+              <Divider />
+              <List dense disablePadding sx={{ maxHeight: '65vh', overflowY: 'auto' }}>
+                {devices.map((d: Device) => {
+                  const id = (d as any)?.id || (d as any)?._id || d.deviceId;
+                  const selected = !!id && id === selectedDeviceId;
+                  return (
+                    <ListItemButton
+                      key={String(id)}
+                      selected={selected}
+                      onClick={() => {
+                        if (!id) return;
+                        handleSelectDevice(String(id), d);
+                        setDevicesOpen(false);
                       }}
-                    />
-                    <Box sx={{ flexGrow: 1 }} />
-                    <Button
-                      size="small"
-                      variant="contained"
-                      color="secondary"
-                      disableElevation
-                      onClick={() => dispatch(logout())}
-                      sx={{ height: 34, px: 1.5, fontWeight: 800, textTransform: 'none' }}
+                      sx={{ py: 1.25, px: 2 }}
                     >
-                      Logout
-                    </Button>
-                  </Stack>
+                      <ListItemAvatar>
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: (d as any)?.isActive ? 'success.main' : 'warning.main' }}>
+                          <DevicesOtherIcon sx={{ fontSize: 18, color: 'white' }} />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={<Typography variant="body2" sx={{ fontWeight: 800 }}>{d.name || 'Device'}</Typography>}
+                        secondary={<Typography variant="caption" color="text.secondary">{d.deviceId}</Typography>}
+                      />
+                      <Chip
+                        label={(d as any)?.isActive ? 'Online' : 'Offline'}
+                        color={(d as any)?.isActive ? 'success' : 'warning'}
+                        size="small"
+                        variant={selected ? 'filled' : 'outlined'}
+                        sx={{ fontWeight: 800 }}
+                      />
+                    </ListItemButton>
+                  );
+                })}
+              </List>
+            </SwipeableDrawer>
 
-                  <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexWrap: 'wrap' }}>
-                    <FormControlLabel
-                      control={<Switch size="small" color="primary" checked={!latestOnly} onChange={(e) => setLatestOnly(!e.target.checked)} />}
-                      label={<Typography variant="button" sx={{ fontWeight: 800, letterSpacing: '0.08em', fontSize: 10 }}>PATH</Typography>}
-                      sx={{ mr: 0, ml: 0, '& .MuiFormControlLabel-label': { mt: 0.25 } }}
-                    />
-                    <FormControlLabel
-                      control={<Switch size="small" color="primary" checked={showAllDevices} onChange={(e) => setShowAllDevices(e.target.checked)} disabled={!latestOnly} />}
-                      label={<Typography variant="button" sx={{ fontWeight: 800, letterSpacing: '0.08em', fontSize: 10 }}>ALL</Typography>}
-                      sx={{ mr: 0, ml: 0, '& .MuiFormControlLabel-label': { mt: 0.25 } }}
-                    />
-                  </Stack>
+            <SwipeableDrawer
+              anchor="bottom"
+              open={settingsOpen}
+              onClose={() => setSettingsOpen(false)}
+              onOpen={() => setSettingsOpen(true)}
+              disableSwipeToOpen
+              PaperProps={{ sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16 } }}
+            >
+              <Box sx={{ px: 2, pt: 1.25, pb: 1 }}>
+                <Box sx={{ width: 36, height: 4, borderRadius: 999, bgcolor: 'rgba(0,0,0,0.15)', mx: 'auto', mb: 1 }} />
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 900 }}>
+                    View Settings
+                  </Typography>
+                  <Box sx={{ flexGrow: 1 }} />
+                  <Button size="small" variant="text" onClick={() => setSettingsOpen(false)} sx={{ fontWeight: 800 }}>
+                    Close
+                  </Button>
+                </Stack>
+              </Box>
+              <Divider />
+              <Box sx={{ px: 2, py: 1.25 }}>
+                <Stack spacing={1.25}>
+                  <FormControlLabel
+                    control={<Switch color="primary" checked={!latestOnly} onChange={handleToggleHistory} />}
+                    label={<Typography variant="body2" sx={{ fontWeight: 800 }}>Enable History / Path</Typography>}
+                    sx={{ ml: 0, mr: 0, justifyContent: 'space-between', '& .MuiFormControlLabel-label': { flexGrow: 1 } }}
+                  />
+                  <FormControlLabel
+                    control={<Switch color="primary" checked={showAllDevices} onChange={handleToggleAllDevices} disabled={!latestOnly} />}
+                    label={<Typography variant="body2" sx={{ fontWeight: 800 }}>Show All Devices</Typography>}
+                    sx={{ ml: 0, mr: 0, justifyContent: 'space-between', '& .MuiFormControlLabel-label': { flexGrow: 1 } }}
+                  />
 
                   {!latestOnly && (
                     <Stack spacing={1}>
@@ -461,7 +652,6 @@ const DashboardPage: React.FC = () => {
                         value={dateStr ?? ''}
                         onChange={(e) => setDateStr(e.target.value || null)}
                         InputLabelProps={{ shrink: true }}
-                        sx={{ bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
                         fullWidth
                       />
                       <Stack direction="row" spacing={1}>
@@ -472,7 +662,6 @@ const DashboardPage: React.FC = () => {
                           value={fromTimeStr ?? ''}
                           onChange={(e) => setFromTimeStr(e.target.value || null)}
                           InputLabelProps={{ shrink: true }}
-                          sx={{ bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
                           fullWidth
                         />
                         <TextField
@@ -482,87 +671,24 @@ const DashboardPage: React.FC = () => {
                           value={toTimeStr ?? ''}
                           onChange={(e) => setToTimeStr(e.target.value || null)}
                           InputLabelProps={{ shrink: true }}
-                          sx={{ bgcolor: 'rgba(255,255,255,0.9)', borderRadius: 1 }}
                           fullWidth
                         />
                       </Stack>
-                      <Button size="small" variant="text" onClick={() => { setDateStr(null); setFromTimeStr(null); setToTimeStr(null); }}>
+                      <Button size="small" variant="text" onClick={() => { setDateStr(null); setFromTimeStr(null); setToTimeStr(null); }} sx={{ fontWeight: 800 }}>
                         Clear
                       </Button>
                     </Stack>
                   )}
 
-                  <Stack direction="row" spacing={1}>
-                    <Button
-                      fullWidth
-                      size="small"
-                      variant="contained"
-                      color="primary"
-                      disableElevation
-                      sx={{ height: 36, fontWeight: 800, textTransform: 'none' }}
-                      onClick={() => {
-                        if (!map) return;
-                        const indonesiaBounds = L.latLngBounds([[-11.0, 95.0], [6.5, 141.0]]);
-                        map.fitBounds(indonesiaBounds, { padding: [24, 24] });
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  </Stack>
+                  <Divider />
+                  <Button variant="contained" color="secondary" onClick={() => dispatch(logout())} sx={{ fontWeight: 900 }}>
+                    Logout
+                  </Button>
                 </Stack>
-              </Paper>
-
-              <Paper elevation={0} sx={{ ...glassPanelSx, overflow: 'hidden' }}>
-                <Box sx={{ position: 'relative' }}>
-                  <MapView
-                    device={selectedDevice}
-                    devices={devices as unknown as Device[]}
-                    locations={locations}
-                    height="clamp(280px, 42vh, 420px)"
-                    bare
-                    latestOnly={latestOnly}
-                    showAllDevices={showAllDevices}
-                    onMapReady={handleMapReady}
-                    from={pathFrom}
-                    to={pathTo}
-                    statsLatest={(stats as any)?.deviceId === selectedDeviceId ? (stats as any)?.latestLocation ?? null : null}
-                    forceTick={forceTick}
-                    activeId={selectedDeviceId}
-                    geofence={geofence}
-                  />
-                  {locationsState.loading && (
-                    <Skeleton
-                      variant="rectangular"
-                      width="100%"
-                      height="100%"
-                      sx={{ position: 'absolute', inset: 0, zIndex: 0, opacity: 0.35, transition: 'opacity 200ms ease', willChange: 'opacity' }}
-                    />
-                  )}
-                </Box>
-              </Paper>
-
-              <DeviceList
-                devices={devices}
-                selectedId={selectedDeviceId}
-                onSelect={(id) => handleSelectDevice(id)}
-                loading={deviceLoading && devices.length === 0}
-                containerSx={glassPanelSx}
-                onRefresh={() => dispatch(fetchDevices())}
-                showPath={!latestOnly}
-                pathDistanceKm={tripDistanceKm}
-                pathDistanceLoading={locationsState.loading}
-              />
-
-              {deviceError && (
-                <Paper sx={{ ...glassPanelSx, p: 2 }}>
-                  <Typography variant="subtitle2" color="error">
-                    {deviceError}
-                  </Typography>
-                </Paper>
-              )}
-            </Stack>
-          )}
-        </Container>
+              </Box>
+            </SwipeableDrawer>
+          </>
+        )}
       </Box>
     );
   }
