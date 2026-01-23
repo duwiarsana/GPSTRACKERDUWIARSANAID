@@ -501,13 +501,14 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
       center={persisted?.center ? [persisted.center[0], persisted.center[1]] : [DEFAULT_COORDINATES[1], DEFAULT_COORDINATES[0]]}
       zoom={persisted?.zoom ?? 11}
       style={{ height: typeof height === 'number' ? `${height}px` : (height as string), width: '100%' }}
+      attributionControl={!isMobile}
       zoomControl={false}
     >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <ZoomControl position={isMobile ? 'bottomright' : 'topleft'} />
+        {!isMobile && <ZoomControl position="topleft" />}
         <PersistView onReady={onMapReady} />
         {latestOnly ? (
           showAllDevices && devices && devices.length > 0 ? (
