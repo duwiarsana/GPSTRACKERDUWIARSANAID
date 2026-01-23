@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Paper, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { MapContainer, TileLayer, useMap, Polyline, CircleMarker, Tooltip, ZoomControl, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap, useMapEvents, Polyline, CircleMarker, Tooltip, ZoomControl, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MapView.css';
@@ -61,9 +61,19 @@ const PersistView: React.FC<{ onReady?: (map: L.Map) => void }> = ({ onReady }) 
   return null;
 };
 
+const PopupCloseListener: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  useMapEvents({
+    popupclose: () => {
+      onClose();
+    },
+  });
+  return null;
+};
+
 const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 420, bare = false, latestOnly = true, showAllDevices = false, autoFit = false, onMapReady, onSelectDevice, from, to, statsLatest = null, forceTick, activeId, allowCacheLatest = false, geofence = null }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [openPopupId, setOpenPopupId] = useState<string | null>(null);
   // Load persisted view
   const persisted = useMemo(() => {
     try {
@@ -510,6 +520,7 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
         />
         {!isMobile && <ZoomControl position="topleft" />}
         <PersistView onReady={onMapReady} />
+        <PopupCloseListener onClose={() => setOpenPopupId(null)} />
         {latestOnly ? (
           showAllDevices && devices && devices.length > 0 ? (
             <>
@@ -553,13 +564,16 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                     eventHandlers={{
                       click: () => {
                         ensureAddress(lat, lng);
+                        if (canonicalId) setOpenPopupId(canonicalId);
                         if (onSelectDevice && canonicalId) onSelectDevice(canonicalId);
                       },
                     }}
                   >
-                    <Tooltip className="device-label" direction="top" offset={[0, -10]} opacity={1} permanent>
-                      {d?.name || 'Device'}
-                    </Tooltip>
+                    {openPopupId !== canonicalId && (
+                      <Tooltip className="device-label" direction="top" offset={[0, -10]} opacity={1} permanent>
+                        {d?.name || 'Device'}
+                      </Tooltip>
+                    )}
                     <Popup className="glass-popup" closeButton={false} autoPan={true} maxWidth={320}>
                       <div style={{
                         padding: 8,
@@ -624,12 +638,17 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                 radius={8}
                 pathOptions={{ color: '#000000', weight: 2, fillColor: color, fillOpacity: 1 }}
                 eventHandlers={{
-                  click: () => ensureAddress(lat, lng),
+                  click: () => {
+                    ensureAddress(lat, lng);
+                    setOpenPopupId(activeId || 'single');
+                  },
                 }}
               >
-                <Tooltip className="device-label" direction="top" offset={[0, -10]} opacity={1} permanent>
-                  {device?.name || 'Device'}
-                </Tooltip>
+                {openPopupId !== (activeId || 'single') && (
+                  <Tooltip className="device-label" direction="top" offset={[0, -10]} opacity={1} permanent>
+                    {device?.name || 'Device'}
+                  </Tooltip>
+                )}
                 <Popup className="glass-popup" closeButton={false} autoPan={true} maxWidth={320}>
                   <div style={{
                     padding: 8,
