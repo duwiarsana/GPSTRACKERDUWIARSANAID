@@ -4,7 +4,7 @@ Real‑time GPS tracking system with a modern, glassmorphism dashboard. Fullscre
 
 Sistem pelacakan GPS **real‑time** dengan tampilan dashboard modern bergaya glassmorphism. Menggunakan peta OpenStreetMap layar penuh, animasi panel yang halus, dan update posisi langsung via Socket.IO. Mendukung integrasi **MQTT** untuk pengiriman lokasi dari perangkat.
 
-[Repo URL](https://github.com/duwiarsana/GPS-TRACKER-MQTT)
+[Repo URL](https://github.com/duwiarsana/GPSTRACKERDUWIARSANAID)
 
 ## Features / Fitur Utama
 
@@ -30,8 +30,8 @@ Sistem pelacakan GPS **real‑time** dengan tampilan dashboard modern bergaya gl
   *(Alamat / reverse geocoding: UI bisa menampilkan alamat dari koordinat via proxy backend agar tidak kena CORS/403 dari browser)*
 - **Device Quick Stats**: Inline speed, altitude, satellites count, and color-coded battery level on device list  
   *(Statistik cepat: kecepatan, jumlah satelit, dan level baterai berwarna langsung di daftar perangkat)*
-- **Status Markers**: Circle markers with black border; green when online, red when offline, with glass tooltip on hover showing name, speed, satellites, battery, and coordinates  
-  *(Marker status: lingkaran hijau/merah dengan tooltip berisi nama, kecepatan, satelit, baterai, dan koordinat)*
+- **Status Markers + Labels**: Circle markers with black border; green when online, red when offline. Device name is shown above the marker. Tap/click marker to open details (speed, satellites, battery, coordinates, address).  
+  *(Marker status + label: lingkaran hijau/merah dengan nama device di atas marker. Tap/klik marker untuk membuka detail (kecepatan, satelit, baterai, koordinat, alamat).)*
 - **Persisted Map View**: Remembers last center/zoom across refresh  
   *(Tampilan peta tersimpan: posisi dan zoom terakhir tetap diingat setelah refresh)*
 - **Device Inactivity**: Auto-mark inactive after no heartbeat; optional Telegram alert with cooldown  
@@ -48,7 +48,7 @@ Sistem pelacakan GPS **real‑time** dengan tampilan dashboard modern bergaya gl
 ## What You Get / Apa yang Anda Dapatkan
 
 - **Source Code Lengkap**  
-  Backend (Node.js/Express/MongoDB), Frontend (React/Leaflet), serta konfigurasi Docker untuk mode development dan production.
+  Backend (Node.js/Express/MySQL + Sequelize), Frontend (React/Leaflet), serta konfigurasi Docker untuk mode development dan production.
 
 - **Integrasi MQTT Siap Pakai**  
   Backend siap subscribe ke broker MQTT eksternal dengan topik `gpstracker/device/{deviceId}/location` dan format payload yang terdokumentasi dengan jelas.
@@ -67,12 +67,12 @@ Sistem pelacakan GPS **real‑time** dengan tampilan dashboard modern bergaya gl
 
 ## Tech Stack
 
-- **Backend**: Node.js, Express, MongoDB (Mongoose)
+- **Backend**: Node.js, Express, MySQL (Sequelize)
 - **Frontend**: React, Redux Toolkit, Material UI (v5)
 - **Map**: React Leaflet + OpenStreetMap tiles
 - **Auth**: JWT (JSON Web Tokens)
 - **Realtime**: WebSocket (internal) / optional MQTT integration
-- **Dev/Deploy**: Docker (MongoDB), npm workspaces
+- **Dev/Deploy**: Docker (MySQL), npm workspaces
 
 ## Table of Contents
 
@@ -92,7 +92,7 @@ Sistem pelacakan GPS **real‑time** dengan tampilan dashboard modern bergaya gl
 
 ## Quick Start (End-to-End)
 
-From the monorepo root `gps-tracker`:
+From the repo root:
 
 ```bash
 npm install
@@ -104,7 +104,7 @@ Backend and frontend also support individual start scripts from their folders. D
 
 ### One-command startup (recommended)
 
-If you use Docker for MongoDB, start everything with one command:
+If you use Docker for MySQL, start everything with one command:
 
 ```bash
 npm run dev:up
@@ -112,28 +112,28 @@ npm run dev:up
 
 This will:
 
-- Start MongoDB via docker compose (service `mongo`)
+- Start MySQL via docker compose (service `mysql`)
 - Run backend and frontend concurrently
 
 If you encounter a container name conflict, run:
 
 ```bash
-npm run dev:reset-mongo
+npm run dev:reset-mysql
 ```
 
 If you want to run each service separately:
 
 ```bash
 # Terminal A
-cd gps-tracker/backend && npm install && npm run dev
+cd backend && npm install && npm run dev
 # Terminal B
-cd gps-tracker/frontend && npm install && npm start
+cd frontend && npm install && npm start
 ```
 
 ## Prerequisites
 
 - Node.js (v18+ recommended)
-- Docker (for MongoDB)
+- Docker (for MySQL)
 - npm or yarn
 
 ## Setup Instructions
@@ -143,14 +143,14 @@ cd gps-tracker/frontend && npm install && npm start
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/gps-tracker.git
-   cd gps-tracker
+   git clone https://github.com/duwiarsana/GPSTRACKERDUWIARSANAID.git
+   cd GPSTRACKERDUWIARSANAID
    ```
 
-2. Start MongoDB using Docker:
+2. Start MySQL using Docker (recommended for dev):
 
    ```bash
-   docker compose up -d mongo
+   docker compose -f docker-compose.dev.yml up -d mysql
    ```
 
 3. Backend dependencies and env:
@@ -160,13 +160,17 @@ cd gps-tracker/frontend && npm install && npm start
    npm install
    ```
 
-   Create `.env` (adjust values as needed):
+   Create `backend/.env` (adjust values as needed):
 
    ```env
    # See backend/.env.example and copy to backend/.env
    NODE_ENV=development
    PORT=5050
-   MONGODB_URI=mongodb://127.0.0.1:27017/gpstracker
+   MYSQL_HOST=127.0.0.1
+   MYSQL_PORT=3306
+   MYSQL_DATABASE=gpstracker
+   MYSQL_USER=gpstracker
+   MYSQL_PASSWORD=gpstracker
    JWT_SECRET=your_jwt_secret_key_here
    JWT_EXPIRE=30d
    JWT_COOKIE_EXPIRE=7
@@ -183,19 +187,7 @@ cd gps-tracker/frontend && npm install && npm start
    DEVICE_INACTIVE_TIMEOUT_MS=40000
    ```
 
-6. (Optional) Run MongoDB via Docker Compose
-
-   This repo includes `docker-compose.yml` to spin up MongoDB and mongo-express quickly.
-
-   ```bash
-   cd ../
-   docker compose up -d
-   # MongoDB: mongodb://127.0.0.1:27017
-   # mongo-express UI: http://localhost:8081
-   ```
-   Ensure your backend `.env` uses `MONGODB_URI=mongodb://127.0.0.1:27017/gpstracker`.
-
-7. (Optional) Dev Compose (Mongo + Backend + Frontend)
+6. (Optional) Dev Compose (MySQL + Backend + Frontend)
 
    Use the provided `docker-compose.dev.yml` to run everything with one command.
 
@@ -203,14 +195,13 @@ cd gps-tracker/frontend && npm install && npm start
    docker compose -f docker-compose.dev.yml up -d
    # Frontend: http://localhost:3000
    # Backend API: http://localhost:5050/api/v1
-   # MongoDB: mongodb://127.0.0.1:27017
-   # mongo-express: http://localhost:8081
+   # MySQL: 127.0.0.1:3306 (published)
    ```
 
    Notes:
 
-   - Backend container connects to Mongo via `mongodb://mongo:27017/gpstracker` (service name `mongo`).
-   - Frontend container uses `REACT_APP_API_URL=http://localhost:5050/api/v1` by default, so no extra config needed.
+   - Backend container connects to MySQL via `MYSQL_HOST=mysql` (service name `mysql`).
+   - Frontend container uses `REACT_APP_API_URL=http://localhost:5050/api/v1` by default.
    - To stop: `docker compose -f docker-compose.dev.yml down` (append `-v` to remove volumes).
 
 4. Seed default admin user (idempotent):
@@ -330,27 +321,34 @@ Minimal yang diperlukan agar titik tersimpan: `latitude`, `longitude`.
 
 ## Database
 
-MongoDB (default): `mongodb://127.0.0.1:27017/gpstracker`
+MySQL (default database): `gpstracker`
 
-Collections (simplified):
+Tables (simplified):
+- `users`
+  - Primary key: `_id` (string)
+  - Key fields: `name`, `email` (unique), `password` (hashed), `role`
 - `devices`
-  - Fields: `deviceId` (string, unique), `name`, `isActive`, `lastSeen`, `currentLocation` (GeoJSON Point + telemetry), `user`
+  - Primary key: `_id` (string)
+  - Key fields: `deviceId` (unique), `name`, `isActive`, `lastSeen`, `currentLocation` (JSON), `user` (FK-like string id of owner)
 - `locations`
-  - Fields: `device` (ObjectId -> devices), `location` (GeoJSON Point), `timestamp`, optional `speed`, `accuracy`, `altitude`, `battery`, `satellites`, `metadata`
+  - Primary key: `_id` (string)
+  - Key fields: `device` (device `_id`), `location` (JSON `{ type:'Point', coordinates:[lng,lat] }`), `timestamp`, optional `speed`, `accuracy`, `altitude`, `battery`, `satellites`, `metadata`
 
-Indexes (key ones):
-- `locations.location` 2dsphere
-- `locations.device + timestamp` (compound for history queries)
+Sample queries (MySQL):
 
-Sample queries (mongosh):
-```js
-use gpstracker
-db.devices.find({}, { deviceId:1, name:1, isActive:1, lastSeen:1 }).pretty()
-// Count locations for one deviceId
-const dev = db.devices.findOne({ deviceId: 'AGPS2235' })
-db.locations.countDocuments({ device: dev._id })
-// Latest 20 points
-db.locations.find({ device: dev._id }).sort({ timestamp: -1 }).limit(20)
+```sql
+-- List devices
+SELECT _id, deviceId, name, isActive, lastSeen FROM devices;
+
+-- Count locations for a device
+SELECT COUNT(*) FROM locations WHERE device = '<device_id>';
+
+-- Latest 20 points
+SELECT timestamp, location, speed, satellites, altitude, battery
+FROM locations
+WHERE device = '<device_id>'
+ORDER BY timestamp DESC
+LIMIT 20;
 ```
 
 Data flow:
@@ -390,7 +388,7 @@ For support, please open an issue in the GitHub repository or contact the mainta
 
 **Note**: This is a development version. For production deployment, make sure to:
 
-- Use managed MongoDB and secure your JWT secrets
+- Use managed MySQL (or secure your MySQL instance) and secure your JWT secrets
 - Configure HTTPS/SSL
 - Harden CORS and cookies
 - Enable rate limiting and logging
@@ -416,7 +414,11 @@ Create `backend/.env` with at least:
 # Core
 NODE_ENV=development
 PORT=5050
-MONGODB_URI=mongodb://127.0.0.1:27017/gpstracker
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_DATABASE=gpstracker
+MYSQL_USER=root
+MYSQL_PASSWORD=
 JWT_SECRET=your_jwt_secret_key_here
 JWT_EXPIRE=30d
 JWT_COOKIE_EXPIRE=30
@@ -476,13 +478,14 @@ Adjust broker credentials and topics in the sketches as needed.
 
 - Deleting a device requires ownership or admin role.
 - On delete, the backend removes the device and its location history.
-- If the UI only knows `deviceId` (external), it resolves the MongoDB `_id` before calling the delete API.
+- If the UI only knows `deviceId` (external), it resolves the internal `_id` before calling the delete API.
 
 ## Troubleshooting
 
 - Login fails / 401 / Network error:
-  - Ensure backend is running on `PORT=5050` and frontend `.env` has `REACT_APP_API_URL=http://localhost:5050/api/v1`.
-  - Confirm MongoDB is reachable (`MONGODB_URI`).
+  - Ensure backend is running on `PORT=5050`.
+  - Confirm MySQL is reachable (check `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`).
+  - If accessing the frontend from mobile via a dev server URL like `http://<LAN-IP>:3000`, the frontend will call API on `http://<LAN-IP>:5050/api/v1` automatically.
 - Realtime updates not appearing:
   - Check browser console for WebSocket errors.
   - Verify backend logs show `Connected to MQTT Broker` and subscriptions if using MQTT.
@@ -496,26 +499,26 @@ Adjust broker credentials and topics in the sketches as needed.
 
 ## Repo Scripts
 
-From monorepo root `gps-tracker`:
+From repo root:
 
 ```bash
 npm run dev-backend   # nodemon backend on 5050
 npm run dev-frontend  # CRA dev server on 3000
 npm run dev:all       # run both concurrently
-npm run dev:up        # compose mongo + run both concurrently
-npm run dev:reset-mongo  # fix container name conflicts then bring mongo up
+npm run dev:up        # compose mysql + run both concurrently
+npm run dev:reset-mysql  # fix container name conflicts then bring mysql up
 npm run setup         # install root + backend + frontend dependencies
 ```
 
 ## Development Architecture Model
 
 - Frontend (React) and backend (Node/Express) run on the host in development.
-- MongoDB runs in Docker (service name `mongo`, port 27017 published).
+- MySQL runs in Docker (service name `mysql`, port 3306 published).
 - Frontend API base URL:
   - Use `REACT_APP_API_URL` in `frontend/.env` to override, otherwise it falls back to `http(s)://<host>:5050/api/v1`.
-- Backend connects to Mongo via `MONGODB_URI` (default `mongodb://127.0.0.1:27017/gpstracker`).
+- Backend connects to MySQL via `MYSQL_*` env vars.
 
-Tip: For an all-in-one Docker Compose dev (frontend+backend+mongo), see `docker-compose.dev.yml` section below.
+Tip: For an all-in-one Docker Compose dev (frontend+backend+mysql), see `docker-compose.dev.yml`.
 
 ## Seeding & Default Credentials
 
@@ -546,7 +549,7 @@ A: Untuk puluhan perangkat aktif secara bersamaan, rekomendasi awal:
 Untuk ratusan perangkat, sesuaikan RAM/CPU dan gunakan broker MQTT yang andal.
 
 **Q: Apakah data lokasi disimpan selamanya?**  
-A: Secara default backend menyimpan semua histori lokasi di MongoDB, tetapi tampilan dashboard dan tabel riwayat fokus pada **24 jam terakhir** (clustering "visits" dan raw points). Retensi database bisa diatur manual oleh admin (misalnya lewat job cleanup eksternal).
+A: Secara default backend menyimpan semua histori lokasi di MySQL, tetapi tampilan dashboard dan tabel riwayat fokus pada **24 jam terakhir** (clustering "visits" dan raw points). Retensi database bisa diatur manual oleh admin (misalnya lewat job cleanup eksternal).
 
 **Q: Apakah aplikasi ini mendukung banyak user?**  
 A: Ya. Sistem auth berbasis email/password dengan role admin. Admin bisa membuat beberapa device, dan dashboard bisa diakses dari banyak browser sekaligus. Multi-tenant penuh (perusahaan terpisah) belum dioptimalkan; saat ini cocok untuk satu organisasi/perusahaan per deploy.
@@ -573,15 +576,15 @@ A: Ya, source code ini bisa dimodifikasi sesuai kebutuhan proyek Anda (branding,
 ## Troubleshooting (First Run)
 
 - `concurrently: command not found`: run `npm install` in the monorepo root.
-- Backend crashes with `ECONNREFUSED 127.0.0.1:27017`:
-  - Ensure MongoDB is running: `docker compose up -d mongo`
-  - If conflict: `npm run dev:reset-mongo`
+- Backend crashes with MySQL connection errors:
+  - Ensure MySQL is running: `docker compose -f docker-compose.dev.yml up -d mysql`
+  - If conflict: `npm run dev:reset-mysql`
   - Re-run the app: `npm run dev:all` or `npm run dev:up`
-- Port in use (3000/5050/27017): stop conflicting processes or change the port.
+- Port in use (3000/5050/3306): stop conflicting processes or change the port.
 
 ## Production Deployment
 
-This repo includes a production-ready Docker setup to run frontend, backend, and MongoDB with a single command.
+This repo includes a production-ready Docker setup to run frontend, backend, and MySQL with a single command.
 
 ### 1) Prepare environment
 
@@ -602,7 +605,7 @@ Services:
 
 - Frontend (Nginx): <http://localhost> (port 80)
 - Backend API: <http://localhost:5050/api/v1>
-- MongoDB: mongodb://localhost:27017/gpstracker
+- MySQL: 127.0.0.1:3306 (published)
 
 Healthcheck: backend exposes GET /health returning `{ status: 'ok' }`.
 
@@ -622,8 +625,8 @@ docker compose -f docker-compose.prod.yml down
 Security tips:
 
 - Set a strong JWT_SECRET and restrict CORS_ORIGIN in backend/.env.
-- Consider disabling mongo-express in production or protect it.
-- Configure a managed MongoDB for production environments.
+- Consider not publishing port 3306 publicly (keep MySQL internal).
+- Consider using a managed MySQL for production environments.
 
 ## Deploy to VPS/Cloud (Quick Guide)
 
@@ -636,7 +639,7 @@ sudo usermod -aG docker $USER && newgrp docker
 
 # 2) Clone project
 git clone <your-repo-url>
-cd gps-tracker
+cd <repo-folder>
 
 # 3) Prepare env and start
 cp backend/.env.production.example backend/.env
@@ -665,13 +668,13 @@ Contoh untuk VPS Ubuntu 22.04 (baru/bersih):
 
 2. **Upload & Ekstrak Source Code**
 
-   - Upload file ZIP proyek ke VPS (misalnya ke `/opt/gps-tracker`).
+   - Upload file ZIP proyek ke VPS (misalnya ke `/opt/gpstracker`).
    - Ekstrak:
 
      ```bash
      cd /opt
-     unzip gps-tracker-release.zip -d gps-tracker
-     cd gps-tracker
+     unzip gpstracker-release.zip -d gpstracker
+     cd gpstracker
      ```
 
 3. **Siapkan Environment Backend**
@@ -698,7 +701,7 @@ Contoh untuk VPS Ubuntu 22.04 (baru/bersih):
 
    - Frontend: `http://<IP_VPS>` (port 80)
    - API backend: `http://<IP_VPS>:5050/api/v1`
-   - MongoDB berjalan di dalam container (tidak perlu diakses langsung dari luar).
+   - MySQL berjalan di dalam container (sebaiknya tidak dipublish ke internet).
 
 5. **Buat Akun Admin**
 
