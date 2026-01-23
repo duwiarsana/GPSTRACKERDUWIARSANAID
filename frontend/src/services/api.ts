@@ -15,6 +15,14 @@ export const API_URL = (() => {
     return `${window.location.protocol}//${host}:5050/api/v1`;
   }
 
+  const port = window.location.port;
+  // If accessing the frontend via a dev server on a non-standard port (e.g. 3000/5173)
+  // from another device (mobile), there is usually no reverse proxy for /api.
+  // In that case, point API to :5050 on the same hostname.
+  if (port && port !== '80' && port !== '443') {
+    return `${window.location.protocol}//${host}:5050/api/v1`;
+  }
+
   return `${window.location.origin}/api/v1`;
 })();
 
