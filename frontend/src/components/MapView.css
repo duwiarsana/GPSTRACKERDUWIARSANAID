@@ -36,6 +36,113 @@
    margin: 0;
  }
 
+ .device-detail {
+   padding: 10px;
+   border-radius: 14px;
+   background: rgba(255, 255, 255, 0.16);
+   border: 1px solid rgba(255, 255, 255, 0.25);
+   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+   color: rgba(15, 23, 42, 0.94);
+   -webkit-backdrop-filter: blur(8px);
+   backdrop-filter: blur(8px);
+ }
+
+ .device-detail-header {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 10px;
+ }
+
+ .device-detail-title {
+   font-weight: 800;
+   font-size: 14px;
+   line-height: 1.2;
+ }
+
+ .device-detail-status {
+   font-weight: 800;
+   font-size: 10px;
+   letter-spacing: 0.06em;
+   padding: 2px 8px;
+   border-radius: 9999px;
+   border: 1px solid rgba(15, 23, 42, 0.12);
+   background: rgba(255, 255, 255, 0.7);
+ }
+
+ .device-detail-status.online {
+   color: #065f46;
+   border-color: rgba(6, 95, 70, 0.22);
+   background: rgba(16, 185, 129, 0.14);
+ }
+
+ .device-detail-status.offline {
+   color: #991b1b;
+   border-color: rgba(153, 27, 27, 0.22);
+   background: rgba(239, 68, 68, 0.14);
+ }
+
+ .device-detail-sub {
+   margin-top: 4px;
+   font-size: 11px;
+   color: rgba(15, 23, 42, 0.7);
+ }
+
+ .device-detail-grid {
+   margin-top: 8px;
+   display: grid;
+   grid-template-columns: 1fr 1fr;
+   gap: 8px 10px;
+ }
+
+ .device-detail-grid .kv {
+   display: flex;
+   flex-direction: column;
+   gap: 2px;
+   padding: 6px 8px;
+   border-radius: 12px;
+   border: 1px solid rgba(15, 23, 42, 0.08);
+   background: rgba(255, 255, 255, 0.6);
+ }
+
+ .device-detail-grid .k {
+   font-size: 10px;
+   font-weight: 700;
+   color: rgba(15, 23, 42, 0.6);
+ }
+
+ .device-detail-grid .v {
+   font-size: 12px;
+   font-weight: 800;
+   color: rgba(15, 23, 42, 0.92);
+ }
+
+ .battery-inline {
+   display: inline-flex;
+   align-items: center;
+   gap: 6px;
+ }
+
+ .device-detail-coords {
+   margin-top: 8px;
+   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+   font-size: 11px;
+   color: rgba(15, 23, 42, 0.85);
+ }
+
+ .device-detail-address {
+   margin-top: 6px;
+   font-size: 12px;
+   line-height: 1.35;
+   color: rgba(15, 23, 42, 0.9);
+ }
+
+ .device-detail-loading {
+   margin-top: 6px;
+   font-size: 12px;
+   color: rgba(15, 23, 42, 0.65);
+ }
+
  .map-tooltip-address {
    max-width: 320px;
    display: -webkit-box;
@@ -45,6 +152,16 @@
    overflow: hidden;
    text-overflow: ellipsis;
    white-space: normal;
+ }
+
+ @media (max-width: 600px) {
+   .device-detail {
+     padding: 10px;
+   }
+
+   .device-detail-grid {
+     grid-template-columns: 1fr 1fr;
+   }
  }
 
  @media (max-width: 600px) {
