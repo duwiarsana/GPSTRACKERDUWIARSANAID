@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Paper, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { MapContainer, TileLayer, useMap, Polyline, CircleMarker, Tooltip, ZoomControl, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap, useMapEvents, Polyline, CircleMarker, Tooltip, ZoomControl, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MapView.css';
 import type { Device, Location } from '../types';
 import { API_URL } from '../services/api';
+import SpeedRounded from '@mui/icons-material/SpeedRounded';
+import SatelliteAltRounded from '@mui/icons-material/SatelliteAltRounded';
 import BatteryChargingFullRounded from '@mui/icons-material/BatteryChargingFullRounded';
 import Battery0BarRounded from '@mui/icons-material/Battery0BarRounded';
 import Battery2BarRounded from '@mui/icons-material/Battery2BarRounded';
@@ -56,6 +58,15 @@ const PersistView: React.FC<{ onReady?: (map: L.Map) => void }> = ({ onReady }) 
       map.off('zoomend', save);
     };
   }, [map, onReady]);
+  return null;
+};
+
+const PopupCloseListener: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  useMapEvents({
+    popupclose: () => {
+      onClose();
+    },
+  });
   return null;
 };
 
@@ -509,6 +520,7 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
         />
         {!isMobile && <ZoomControl position="topleft" />}
         <PersistView onReady={onMapReady} />
+        <PopupCloseListener onClose={() => setOpenPopupId(null)} />
         {latestOnly ? (
           showAllDevices && devices && devices.length > 0 ? (
             <>
@@ -534,9 +546,6 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                 const addrKey = addressKeyFor(lat, lng);
                 const addr = addressCache[addrKey];
                 const addrBusy = addressLoading[addrKey];
-                const accuracy = online ? (d as any)?.currentLocation?.accuracy : undefined;
-                const altitude = online ? (d as any)?.currentLocation?.altitude : undefined;
-                const lastSeen = (d as any)?.lastSeen;
                 const BatteryIcon = (() => {
                   if (charging) return BatteryChargingFullRounded;
                   if (level == null) return Battery4BarRounded;
@@ -547,76 +556,57 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                   return BatteryFullRounded;
                 })();
                 return (
-                  <>
-                    <CircleMarker
-                      key={(d as any)._id || (d as any).id || d.deviceId || d.name}
-                      center={[lat, lng]}
-                      radius={isActiveMarker ? 10 : 8}
-                      pathOptions={{ color: '#000000', weight: isActiveMarker ? 3 : 2, fillColor: color, fillOpacity: 1 }}
-                      eventHandlers={{
-                        click: () => {
-                          ensureAddress(lat, lng);
-                          if (canonicalId) setOpenPopupId(canonicalId);
-                          if (onSelectDevice && canonicalId) onSelectDevice(canonicalId);
-                        },
-                      }}
-                    >
-                      {openPopupId !== canonicalId && (
-                        <Tooltip
-                          className="device-label"
-                          direction="top"
-                          offset={[0, -10]}
-                          opacity={1}
-                          permanent
-                          interactive
-                          eventHandlers={{
-                            click: () => {
-                              ensureAddress(lat, lng);
-                              if (canonicalId) setOpenPopupId(canonicalId);
-                              if (onSelectDevice && canonicalId) onSelectDevice(canonicalId);
-                            },
-                          }}
-                        >
-                          {d?.name || 'Device'}
-                        </Tooltip>
-                      )}
-                    </CircleMarker>
-                    {openPopupId === canonicalId && (
-                      <Popup
-                        position={[lat, lng]}
-                        className="glass-popup"
-                        closeButton={isMobile}
-                        autoPan={true}
-                        maxWidth={360}
-                        eventHandlers={{
-                          remove: () => setOpenPopupId((prev) => (prev === canonicalId ? null : prev)),
-                        }}
-                      >
-                        <div className="device-detail">
-                          <div className="device-detail-header">
-                            <div className="device-detail-title">{d?.name || 'Device'}</div>
-                            <div className={`device-detail-status ${online ? 'online' : 'offline'}`}>{online ? 'ONLINE' : 'OFFLINE'}</div>
-                          </div>
-                          <div className="device-detail-sub">{(d as any)?.deviceId || (d as any)?._id}</div>
-                          <div className="device-detail-grid">
-                            <div className="kv"><div className="k">Speed</div><div className="v">{typeof speed === 'number' ? `${speed.toFixed(1)} km/h` : '-'}</div></div>
-                            <div className="kv"><div className="k">Sat</div><div className="v">{typeof sats === 'number' ? sats : '-'}</div></div>
-                            <div className="kv"><div className="k">Alt</div><div className="v">{typeof altitude === 'number' ? `${altitude.toFixed(1)} m` : '-'}</div></div>
-                            <div className="kv"><div className="k">Acc</div><div className="v">{typeof accuracy === 'number' ? `${accuracy.toFixed(0)} m` : '-'}</div></div>
-                            <div className="kv"><div className="k">Battery</div><div className="v"><span className="battery-inline"><BatteryIcon sx={{ fontSize: 16, color: batteryColor }} />{batteryStr}</span></div></div>
-                            <div className="kv"><div className="k">Last seen</div><div className="v">{lastSeen ? new Date(lastSeen).toLocaleString() : '-'}</div></div>
-                          </div>
-                          <div className="device-detail-coords">{lat.toFixed(6)}, {lng.toFixed(6)}</div>
-                          {addr && (
-                            <div className="device-detail-address" title={addr}>{shortAddress(addr)}</div>
-                          )}
-                          {!addr && addrBusy && (
-                            <div className="device-detail-loading">Mengambil alamat…</div>
-                          )}
-                        </div>
-                      </Popup>
+                  <CircleMarker
+                    key={(d as any)._id || (d as any).id || d.deviceId || d.name}
+                    center={[lat, lng]}
+                    radius={isActiveMarker ? 10 : 8}
+                    pathOptions={{ color: '#000000', weight: isActiveMarker ? 3 : 2, fillColor: color, fillOpacity: 1 }}
+                    eventHandlers={{
+                      click: (e) => {
+                        ensureAddress(lat, lng);
+                        if (canonicalId) setOpenPopupId(canonicalId);
+                        try {
+                          (e as any)?.target?.openPopup?.();
+                        } catch {}
+                        if (onSelectDevice && canonicalId) onSelectDevice(canonicalId);
+                      },
+                    }}
+                  >
+                    {openPopupId !== canonicalId && (
+                      <Tooltip className="device-label" direction="top" offset={[0, -10]} opacity={1} permanent>
+                        {d?.name || 'Device'}
+                      </Tooltip>
                     )}
-                  </>
+                    <Popup className="glass-popup" closeButton={false} autoPan={true} maxWidth={320}>
+                      <div style={{
+                        padding: 8,
+                        borderRadius: 12,
+                        background: 'rgba(255,255,255,0.16)',
+                        border: '1px solid rgba(255,255,255,0.25)',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                        color: '#0f172a',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)'
+                      }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{(d?.name || 'Device')} · {(d as any)?.deviceId || (d as any)?._id}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SpeedRounded sx={{ fontSize: 16 }} />{typeof speed === 'number' ? `${speed.toFixed(1)} km/h` : '-'}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SatelliteAltRounded sx={{ fontSize: 16 }} />{typeof sats === 'number' ? sats : '-'}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <BatteryIcon sx={{ fontSize: 16, color: batteryColor }} />
+                            <span>{batteryStr}</span>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 4, fontFamily: 'monospace' }}>{lat.toFixed(6)}, {lng.toFixed(6)}</div>
+                        {addr && (
+                          <div className="map-tooltip-address" title={addr} style={{ marginTop: 4, fontSize: 11, lineHeight: 1.4 }}>{shortAddress(addr)}</div>
+                        )}
+                        {!addr && addrBusy && (
+                          <div style={{ marginTop: 4, fontSize: 11, lineHeight: 1.4 }}>Mengambil alamat…</div>
+                        )}
+                      </div>
+                    </Popup>
+                  </CircleMarker>
                 );
               })}
             </>
@@ -636,9 +626,6 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
             const addrKey = addressKeyFor(lat, lng);
             const addr = addressCache[addrKey];
             const addrBusy = addressLoading[addrKey];
-            const accuracy = (effective as any).accuracy ?? (device as any)?.currentLocation?.accuracy;
-            const altitude = (effective as any).altitude ?? (device as any)?.currentLocation?.altitude;
-            const lastSeen = (device as any)?.lastSeen;
             const BatteryIcon = (() => {
               if (charging) return BatteryChargingFullRounded;
               if (level == null) return Battery4BarRounded;
@@ -649,73 +636,55 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
               return BatteryFullRounded;
             })();
             return (
-              <>
-                <CircleMarker
-                  center={[lat, lng]}
-                  radius={8}
-                  pathOptions={{ color: '#000000', weight: 2, fillColor: color, fillOpacity: 1 }}
-                  eventHandlers={{
-                    click: () => {
-                      ensureAddress(lat, lng);
-                      setOpenPopupId(activeId || 'single');
-                    },
-                  }}
-                >
-                  {openPopupId !== (activeId || 'single') && (
-                    <Tooltip
-                      className="device-label"
-                      direction="top"
-                      offset={[0, -10]}
-                      opacity={1}
-                      permanent
-                      interactive
-                      eventHandlers={{
-                        click: () => {
-                          ensureAddress(lat, lng);
-                          setOpenPopupId(activeId || 'single');
-                        },
-                      }}
-                    >
-                      {device?.name || 'Device'}
-                    </Tooltip>
-                  )}
-                </CircleMarker>
-                {openPopupId === (activeId || 'single') && (
-                  <Popup
-                    position={[lat, lng]}
-                    className="glass-popup"
-                    closeButton={isMobile}
-                    autoPan={true}
-                    maxWidth={360}
-                    eventHandlers={{
-                      remove: () => setOpenPopupId((prev) => (prev === (activeId || 'single') ? null : prev)),
-                    }}
-                  >
-                    <div className="device-detail">
-                      <div className="device-detail-header">
-                        <div className="device-detail-title">{device?.name || 'Device'}</div>
-                        <div className={`device-detail-status ${online ? 'online' : 'offline'}`}>{online ? 'ONLINE' : 'OFFLINE'}</div>
-                      </div>
-                      <div className="device-detail-sub">{(device as any)?.deviceId || (device as any)?._id}</div>
-                      <div className="device-detail-grid">
-                        <div className="kv"><div className="k">Speed</div><div className="v">{typeof speed === 'number' ? `${speed.toFixed(1)} km/h` : '-'}</div></div>
-                        <div className="kv"><div className="k">Sat</div><div className="v">{typeof sats === 'number' ? sats : '-'}</div></div>
-                        <div className="kv"><div className="k">Alt</div><div className="v">{typeof altitude === 'number' ? `${altitude.toFixed(1)} m` : '-'}</div></div>
-                        <div className="kv"><div className="k">Acc</div><div className="v">{typeof accuracy === 'number' ? `${accuracy.toFixed(0)} m` : '-'}</div></div>
-                        <div className="kv"><div className="k">Battery</div><div className="v"><span className="battery-inline"><BatteryIcon sx={{ fontSize: 16, color: batteryColor }} />{batteryStr}</span></div></div>
-                        <div className="kv"><div className="k">Last seen</div><div className="v">{lastSeen ? new Date(lastSeen).toLocaleString() : '-'}</div></div>
-                      </div>
-                      <div className="device-detail-coords">{lat.toFixed(6)}, {lng.toFixed(6)}</div>
-                      {addr && (
-                        <div className="device-detail-address" title={addr}>{shortAddress(addr)}</div>
-                      )}
-                      {!addr && addrBusy && (
-                        <div className="device-detail-loading">Mengambil alamat…</div>
-                      )}
-                    </div>
-                  </Popup>
+              <CircleMarker
+                center={[lat, lng]}
+                radius={8}
+                pathOptions={{ color: '#000000', weight: 2, fillColor: color, fillOpacity: 1 }}
+                eventHandlers={{
+                  click: (e) => {
+                    ensureAddress(lat, lng);
+                    setOpenPopupId(activeId || 'single');
+                    try {
+                      (e as any)?.target?.openPopup?.();
+                    } catch {}
+                  },
+                }}
+              >
+                {openPopupId !== (activeId || 'single') && (
+                  <Tooltip className="device-label" direction="top" offset={[0, -10]} opacity={1} permanent>
+                    {device?.name || 'Device'}
+                  </Tooltip>
                 )}
-              </>
+                <Popup className="glass-popup" closeButton={false} autoPan={true} maxWidth={320}>
+                  <div style={{
+                    padding: 8,
+                    borderRadius: 12,
+                    background: 'rgba(255,255,255,0.16)',
+                    border: '1px solid rgba(255,255,255,0.25)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                    color: '#0f172a',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)'
+                  }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{device?.name || 'Device'}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SpeedRounded sx={{ fontSize: 16 }} />{typeof speed === 'number' ? `${speed.toFixed(1)} km/h` : '-'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SatelliteAltRounded sx={{ fontSize: 16 }} />{typeof sats === 'number' ? sats : '-'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <BatteryIcon sx={{ fontSize: 16, color: batteryColor }} />
+                        <span style={{ color: typeof batteryColor === 'string' ? undefined : undefined }}>{batteryStr}</span>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 4, fontFamily: 'monospace' }}>{lat.toFixed(6)}, {lng.toFixed(6)}</div>
+                    {addr && (
+                      <div className="map-tooltip-address" title={addr} style={{ marginTop: 4, fontSize: 11, lineHeight: 1.4 }}>{shortAddress(addr)}</div>
+                    )}
+                    {!addr && addrBusy && (
+                      <div style={{ marginTop: 4, fontSize: 11, lineHeight: 1.4 }}>Mengambil alamat…</div>
+                    )}
+                  </div>
+                </Popup>
+              </CircleMarker>
             );
           })()
           )
