@@ -14,8 +14,7 @@ const App: React.FC = () => {
     }
   }, [token, isAuthenticated, dispatch]);
 
-  const shouldShowDashboard = isAuthenticated || Boolean(token);
-  return shouldShowDashboard ? <DashboardPage /> : <LoginPage />;
+  return isAuthenticated ? <DashboardPage /> : <LoginPage />;
 };
 
 export default App;
