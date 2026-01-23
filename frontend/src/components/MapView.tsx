@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Paper, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { MapContainer, TileLayer, useMap, useMapEvents, Polyline, CircleMarker, Tooltip, ZoomControl, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap, Polyline, CircleMarker, Tooltip, ZoomControl, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MapView.css';
@@ -56,15 +56,6 @@ const PersistView: React.FC<{ onReady?: (map: L.Map) => void }> = ({ onReady }) 
       map.off('zoomend', save);
     };
   }, [map, onReady]);
-  return null;
-};
-
-const PopupCloseListener: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  useMapEvents({
-    popupclose: () => {
-      onClose();
-    },
-  });
   return null;
 };
 
@@ -518,7 +509,6 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
         />
         {!isMobile && <ZoomControl position="topleft" />}
         <PersistView onReady={onMapReady} />
-        <PopupCloseListener onClose={() => setOpenPopupId(null)} />
         {latestOnly ? (
           showAllDevices && devices && devices.length > 0 ? (
             <>
@@ -592,7 +582,16 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                       )}
                     </CircleMarker>
                     {openPopupId === canonicalId && (
-                      <Popup position={[lat, lng]} className="glass-popup" closeButton={isMobile} autoPan={true} maxWidth={360}>
+                      <Popup
+                        position={[lat, lng]}
+                        className="glass-popup"
+                        closeButton={isMobile}
+                        autoPan={true}
+                        maxWidth={360}
+                        eventHandlers={{
+                          remove: () => setOpenPopupId((prev) => (prev === canonicalId ? null : prev)),
+                        }}
+                      >
                         <div className="device-detail">
                           <div className="device-detail-header">
                             <div className="device-detail-title">{d?.name || 'Device'}</div>
@@ -682,7 +681,16 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
                   )}
                 </CircleMarker>
                 {openPopupId === (activeId || 'single') && (
-                  <Popup position={[lat, lng]} className="glass-popup" closeButton={isMobile} autoPan={true} maxWidth={360}>
+                  <Popup
+                    position={[lat, lng]}
+                    className="glass-popup"
+                    closeButton={isMobile}
+                    autoPan={true}
+                    maxWidth={360}
+                    eventHandlers={{
+                      remove: () => setOpenPopupId((prev) => (prev === (activeId || 'single') ? null : prev)),
+                    }}
+                  >
                     <div className="device-detail">
                       <div className="device-detail-header">
                         <div className="device-detail-title">{device?.name || 'Device'}</div>
