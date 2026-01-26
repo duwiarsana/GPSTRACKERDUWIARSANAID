@@ -32,6 +32,8 @@ Sistem pelacakan GPS **real‑time** dengan tampilan dashboard modern bergaya gl
   *(Statistik cepat: kecepatan, jumlah satelit, dan level baterai berwarna langsung di daftar perangkat)*
 - **Status Markers + Labels**: Circle markers with black border; green when online, red when offline. Device name is shown above the marker. Tap/click marker to open details (speed, satellites, battery, coordinates, address).  
   *(Marker status + label: lingkaran hijau/merah dengan nama device di atas marker. Tap/klik marker untuk membuka detail (kecepatan, satelit, baterai, koordinat, alamat).)*
+- **Mobile Map Overlay UI**: On mobile, the top bar shows a non-interactive device label (not a search/input), and bottom-right controls are optimized for tap targets while staying clean and professional.  
+  *(UI overlay mobile: di mobile, bagian atas menampilkan label nama device (bukan kolom input), dan kontrol pojok bawah kanan dibuat lebih jelas serta nyaman untuk tap.)*
 - **Persisted Map View**: Remembers last center/zoom across refresh  
   *(Tampilan peta tersimpan: posisi dan zoom terakhir tetap diingat setelah refresh)*
 - **Device Inactivity**: Auto-mark inactive after no heartbeat; optional Telegram alert with cooldown  
