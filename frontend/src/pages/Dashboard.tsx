@@ -416,12 +416,6 @@ const DashboardPage: React.FC = () => {
     const mobileControlSx = {
       ...glassPanelSx,
       borderRadius: 999,
-      backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    } as const;
-
-    const mobileIconButtonSx = {
-      width: 46,
-      height: 46,
     } as const;
 
     const handleToggleHistory = () => {
@@ -468,6 +462,8 @@ const DashboardPage: React.FC = () => {
           position: 'relative',
           height: '100vh',
           bgcolor: 'background.default',
+          display: 'flex',
+          flexDirection: 'column',
           '@supports (height: 100dvh)': { height: '100dvh' },
           '@supports (height: 100svh)': { height: '100svh' },
         }}
@@ -478,106 +474,108 @@ const DashboardPage: React.FC = () => {
           </Container>
         ) : (
           <>
-            <Box sx={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-              <MapView
-                device={selectedDevice}
-                devices={devices as unknown as Device[]}
-                locations={locations}
-                height="100%"
-                bare
-                latestOnly={latestOnly}
-                showAllDevices={showAllDevices}
-                onMapReady={handleMapReady}
-                from={pathFrom}
-                to={pathTo}
-                statsLatest={(stats as any)?.deviceId === selectedDeviceId ? (stats as any)?.latestLocation ?? null : null}
-                forceTick={forceTick}
-                activeId={selectedDeviceId}
-                geofence={geofence}
-                onSelectDevice={(id) => {
-                  handleSelectDevice(id);
-                  setDevicesOpen(false);
-                }}
-              />
-              {locationsState.loading && (
-                <Skeleton
-                  variant="rectangular"
-                  width="100%"
-                  height="100%"
-                  sx={{ position: 'absolute', inset: 0, zIndex: 0, opacity: 0.35, transition: 'opacity 200ms ease', willChange: 'opacity' }}
-                />
-              )}
+            <Box sx={{ px: 1.5, pt: 1.25, pb: 1, display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Paper elevation={0} sx={mobileLabelSx}>
+                <Stack direction="row" alignItems="center" spacing={1.1} sx={{ minWidth: 0 }}>
+                  <Box sx={{ width: 9, height: 9, borderRadius: 999, bgcolor: headerOnline ? 'success.main' : 'warning.main', flexShrink: 0 }} />
+                  <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.05 }}>
+                    <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: 0.6, opacity: 0.75, lineHeight: 1 }}>
+                      Device
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: 1.05 }}>
+                      {headerTitle}
+                    </Typography>
+                  </Box>
+                  {headerSub ? (
+                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', fontWeight: 800, opacity: 0.9, flexShrink: 0 }}>
+                      {headerSub}
+                    </Typography>
+                  ) : null}
+                </Stack>
+              </Paper>
+              <Paper elevation={0} sx={mobileControlSx}>
+                <Tooltip title="Settings">
+                  <IconButton size="small" onClick={() => setSettingsOpen(true)}>
+                    <TuneIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Paper>
             </Box>
 
-            <Box sx={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
-              <Box sx={{ position: 'absolute', top: 12, left: 12, right: 12, display: 'flex', alignItems: 'center', gap: 1.25, pointerEvents: 'auto' }}>
-                <Paper elevation={0} sx={mobileLabelSx}>
-                  <Stack direction="row" alignItems="center" spacing={1.1} sx={{ minWidth: 0 }}>
-                    <Box sx={{ width: 9, height: 9, borderRadius: 999, bgcolor: headerOnline ? 'success.main' : 'warning.main', flexShrink: 0 }} />
-                    <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.05 }}>
-                      <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: 0.6, opacity: 0.75, lineHeight: 1 }}>
-                        Device
-                      </Typography>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: 1.05 }}>
-                        {headerTitle}
-                      </Typography>
-                    </Box>
-                    {headerSub ? (
-                      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', fontWeight: 800, opacity: 0.9, flexShrink: 0 }}>
-                        {headerSub}
-                      </Typography>
-                    ) : null}
-                  </Stack>
-                </Paper>
-                <Paper elevation={0} sx={mobileControlSx}>
-                  <Tooltip title="Settings">
-                    <IconButton size="medium" sx={mobileIconButtonSx} onClick={() => setSettingsOpen(true)}>
-                      <TuneIcon fontSize="medium" />
-                    </IconButton>
-                  </Tooltip>
-                </Paper>
+            <Box sx={{ position: 'relative', flexGrow: 1, minHeight: 0 }}>
+              <Box sx={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+                <MapView
+                  device={selectedDevice}
+                  devices={devices as unknown as Device[]}
+                  locations={locations}
+                  height="100%"
+                  bare
+                  latestOnly={latestOnly}
+                  showAllDevices={showAllDevices}
+                  onMapReady={handleMapReady}
+                  from={pathFrom}
+                  to={pathTo}
+                  statsLatest={(stats as any)?.deviceId === selectedDeviceId ? (stats as any)?.latestLocation ?? null : null}
+                  forceTick={forceTick}
+                  activeId={selectedDeviceId}
+                  geofence={geofence}
+                  onSelectDevice={(id) => {
+                    handleSelectDevice(id);
+                    setDevicesOpen(false);
+                  }}
+                />
+                {locationsState.loading && (
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height="100%"
+                    sx={{ position: 'absolute', inset: 0, zIndex: 0, opacity: 0.35, transition: 'opacity 200ms ease', willChange: 'opacity' }}
+                  />
+                )}
               </Box>
 
-              <Box sx={{ position: 'absolute', right: 12, bottom: 12, display: 'flex', flexDirection: 'column', gap: 1.1, pointerEvents: 'auto' }}>
-                <Paper elevation={0} sx={mobileControlSx}>
-                  <Tooltip title="Recenter">
-                    <IconButton size="medium" sx={mobileIconButtonSx} onClick={handleRecenter}>
-                      <MyLocationIcon fontSize="medium" />
-                    </IconButton>
-                  </Tooltip>
-                </Paper>
-                <Paper elevation={0} sx={mobileControlSx}>
-                  <Tooltip title="Devices">
-                    <IconButton size="medium" sx={mobileIconButtonSx} onClick={() => setDevicesOpen(true)}>
-                      <DevicesOtherIcon fontSize="medium" />
-                    </IconButton>
-                  </Tooltip>
-                </Paper>
-                <Paper elevation={0} sx={{ ...mobileControlSx, borderColor: showAllDevices ? 'rgba(37,99,235,0.45)' : undefined }}>
-                  <Tooltip title="Show all devices">
-                    <IconButton size="medium" sx={mobileIconButtonSx} color={showAllDevices ? 'primary' : 'default'} onClick={handleToggleAllDevices} disabled={!latestOnly}>
-                      <LayersIcon fontSize="medium" />
-                    </IconButton>
-                  </Tooltip>
-                </Paper>
-                <Paper elevation={0} sx={{ ...mobileControlSx, borderColor: !latestOnly ? 'rgba(37,99,235,0.45)' : undefined }}>
-                  <Tooltip title="History / Path">
-                    <IconButton size="medium" sx={mobileIconButtonSx} color={!latestOnly ? 'primary' : 'default'} onClick={handleToggleHistory}>
-                      <AltRouteIcon fontSize="medium" />
-                    </IconButton>
-                  </Tooltip>
-                </Paper>
-              </Box>
-
-              {deviceError && (
-                <Box sx={{ position: 'absolute', left: 12, right: 12, bottom: 82, pointerEvents: 'auto' }}>
-                  <Paper elevation={0} sx={{ ...glassPanelSx, p: 1.25 }}>
-                    <Typography variant="caption" color="error">
-                      {deviceError}
-                    </Typography>
+              <Box sx={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
+                <Box sx={{ position: 'absolute', right: 12, bottom: 12, display: 'flex', flexDirection: 'column', gap: 1, pointerEvents: 'auto' }}>
+                  <Paper elevation={0} sx={mobileControlSx}>
+                    <Tooltip title="Recenter">
+                      <IconButton size="small" onClick={handleRecenter}>
+                        <MyLocationIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Paper>
+                  <Paper elevation={0} sx={mobileControlSx}>
+                    <Tooltip title="Devices">
+                      <IconButton size="small" onClick={() => setDevicesOpen(true)}>
+                        <DevicesOtherIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Paper>
+                  <Paper elevation={0} sx={{ ...mobileControlSx, borderColor: showAllDevices ? 'rgba(37,99,235,0.35)' : undefined }}>
+                    <Tooltip title="Show all devices">
+                      <IconButton size="small" color={showAllDevices ? 'primary' : 'default'} onClick={handleToggleAllDevices} disabled={!latestOnly}>
+                        <LayersIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Paper>
+                  <Paper elevation={0} sx={{ ...mobileControlSx, borderColor: !latestOnly ? 'rgba(37,99,235,0.35)' : undefined }}>
+                    <Tooltip title="History / Path">
+                      <IconButton size="small" color={!latestOnly ? 'primary' : 'default'} onClick={handleToggleHistory}>
+                        <AltRouteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </Paper>
                 </Box>
-              )}
+
+                {deviceError && (
+                  <Box sx={{ position: 'absolute', left: 12, right: 12, bottom: 82, pointerEvents: 'auto' }}>
+                    <Paper elevation={0} sx={{ ...glassPanelSx, p: 1.25 }}>
+                      <Typography variant="caption" color="error">
+                        {deviceError}
+                      </Typography>
+                    </Paper>
+                  </Box>
+                )}
+              </Box>
             </Box>
 
             <SwipeableDrawer
