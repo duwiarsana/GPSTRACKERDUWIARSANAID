@@ -411,6 +411,8 @@ const DashboardPage: React.FC = () => {
       minWidth: 0,
       cursor: 'default',
       userSelect: 'none',
+      border: '1px solid transparent',
+      boxShadow: 'none',
     } as const;
 
     const mobileControlSx = {
