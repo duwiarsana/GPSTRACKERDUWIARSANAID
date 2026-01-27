@@ -404,8 +404,8 @@ const DashboardPage: React.FC = () => {
 
     const mobileLabelSx = {
       ...glassPanelSx,
-      px: 1.25,
-      py: 0.85,
+      px: 1.75,
+      py: 1.1,
       borderRadius: 3,
       flexGrow: 1,
       minWidth: 0,
@@ -481,10 +481,7 @@ const DashboardPage: React.FC = () => {
                 <Stack direction="row" alignItems="center" spacing={1.1} sx={{ minWidth: 0 }}>
                   <Box sx={{ width: 9, height: 9, borderRadius: 999, bgcolor: headerOnline ? 'success.main' : 'warning.main', flexShrink: 0 }} />
                   <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.05 }}>
-                    <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: 0.6, opacity: 0.75, lineHeight: 1 }}>
-                      Device
-                    </Typography>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: 1.05 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: 1.05 }}>
                       {headerTitle}
                     </Typography>
                   </Box>
