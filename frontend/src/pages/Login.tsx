@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Box,
   Paper,
@@ -12,18 +12,50 @@ import {
 import EmailIcon from '@mui/icons-material/Email';
 import LockIcon from '@mui/icons-material/Lock';
 import { useAppDispatch, useAppSelector } from '../store/store';
-import { login, selectAuth } from '../store/slices/authSlice';
+import { login, register, selectAuth } from '../store/slices/authSlice';
+import type { RegisterData } from '../types';
 
 const LoginPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { loading, error } = useAppSelector(selectAuth);
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const isRegister = mode === 'register';
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
+  const getSignupLocation = useCallback(async (): Promise<{ lat: number; lng: number; accuracy?: number | null } | null> => {
+    if (typeof window === 'undefined') return null;
+    if (!('geolocation' in navigator)) return null;
+
+    return await new Promise((resolve) => {
+      try {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos?.coords?.latitude;
+            const lng = pos?.coords?.longitude;
+            const accuracy = pos?.coords?.accuracy;
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return resolve(null);
+            resolve({ lat, lng, accuracy: Number.isFinite(accuracy) ? accuracy : null });
+          },
+          () => resolve(null),
+          { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 },
+        );
+      } catch {
+        resolve(null);
+      }
+    });
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    if (isRegister && !name.trim()) {
+      setFormError('Nama wajib diisi');
+      return;
+    }
 
     if (!email || !password) {
       setFormError('Email dan password wajib diisi');
@@ -31,7 +63,13 @@ const LoginPage: React.FC = () => {
     }
 
     try {
-      await dispatch(login({ email, password }));
+      if (isRegister) {
+        const signupLocation = await getSignupLocation();
+        const payload: RegisterData = { name: name.trim(), email, password, signupLocation };
+        await dispatch(register(payload));
+      } else {
+        await dispatch(login({ email, password }));
+      }
     } catch (err) {
       // noop, error already in slice
     }
@@ -64,7 +102,9 @@ const LoginPage: React.FC = () => {
         <Stack spacing={3} component="form" onSubmit={handleSubmit} autoComplete="off">
           <Stack spacing={0.5} textAlign="center">
             <Typography variant="h5" fontWeight={700}>GPS Tracker</Typography>
-            <Typography variant="body2" color="text.secondary">Silakan login untuk melanjutkan</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {isRegister ? 'Buat akun untuk melanjutkan' : 'Silakan login untuk melanjutkan'}
+            </Typography>
           </Stack>
 
           <Alert severity="info">
@@ -75,9 +115,26 @@ const LoginPage: React.FC = () => {
             Password: <b>demogps</b>
           </Alert>
 
+          {isRegister ? (
+            <Alert severity="warning">
+              Catatan: akun baru dibatasi maksimal <b>1 device</b>.
+            </Alert>
+          ) : null}
+
           {(formError || error) && (
             <Alert severity="error">{formError || error}</Alert>
           )}
+
+          {isRegister ? (
+            <TextField
+              label="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              fullWidth
+              name="gps_name"
+              autoComplete="off"
+            />
+          ) : null}
 
           <TextField
             label="Email"
@@ -103,7 +160,20 @@ const LoginPage: React.FC = () => {
           />
 
           <Button type="submit" variant="contained" size="large" disabled={loading}>
-            {loading ? 'Signing in...' : 'Login'}
+            {loading ? (isRegister ? 'Creating account...' : 'Signing in...') : (isRegister ? 'Daftar' : 'Login')}
+          </Button>
+
+          <Button
+            type="button"
+            variant="text"
+            size="medium"
+            disabled={loading}
+            onClick={() => {
+              setFormError(null);
+              setMode((m) => (m === 'login' ? 'register' : 'login'));
+            }}
+          >
+            {isRegister ? 'Sudah punya akun? Login' : 'Daftar'}
           </Button>
         </Stack>
       </Paper>

@@ -41,6 +41,18 @@ User.init(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    signupIp: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+    },
+    signupLocation: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    signupUserAgent: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
   },
   {
     sequelize,

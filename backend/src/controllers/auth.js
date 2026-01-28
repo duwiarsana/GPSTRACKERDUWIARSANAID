@@ -6,14 +6,38 @@ const asyncHandler = require('../middleware/async');
 // @route   POST /api/v1/auth/register
 // @access  Public
 exports.register = asyncHandler(async (req, res, next) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, signupLocation } = req.body;
+
+  const forwarded = req.headers['x-forwarded-for'];
+  const ipRaw = Array.isArray(forwarded) ? forwarded[0] : String(forwarded || req.ip || '');
+  const signupIp = String(ipRaw || '').split(',')[0].trim().slice(0, 64) || null;
+  const signupUserAgent = String(req.get('user-agent') || '').slice(0, 255) || null;
+
+  const parsedLoc = (() => {
+    if (!signupLocation || typeof signupLocation !== 'object') return null;
+    const lat = Number(signupLocation.lat);
+    const lng = Number(signupLocation.lng);
+    const accuracy = signupLocation.accuracy != null ? Number(signupLocation.accuracy) : null;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+    return {
+      lat,
+      lng,
+      accuracy: Number.isFinite(accuracy) ? accuracy : null,
+      source: 'browser',
+      timestamp: new Date().toISOString(),
+    };
+  })();
 
   // Create user
   const user = await User.create({
     name,
     email,
     password,
-    role: role || 'user'
+    role: 'user',
+    signupIp,
+    signupLocation: parsedLoc,
+    signupUserAgent,
   });
 
   sendTokenResponse(user, 200, res);

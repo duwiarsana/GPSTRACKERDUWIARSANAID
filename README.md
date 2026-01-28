@@ -110,6 +110,13 @@ Default credentials:
 - **Master Admin (User Manager + monitor all devices)**: `master@gps.com / mastergps`
 - **Admin (if seeded)**: `admin@admin.com / admin123`
 
+Registration:
+
+- Anyone can register an account from the login screen.
+- New accounts are limited to **max 1 device** (admin accounts can manage more).
+- On registration, the backend stores **signup IP** and (if the browser allows) **signup GPS coordinates**.
+- Admin can view signup locations on a map via **User Manager**.
+
 ### One-command startup (recommended)
 
 If you use Docker for MySQL, start everything with one command:

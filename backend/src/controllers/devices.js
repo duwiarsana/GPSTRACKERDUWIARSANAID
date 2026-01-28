@@ -156,6 +156,13 @@ exports.getDevice = asyncHandler(async (req, res, next) => {
 // @route   POST /api/v1/devices
 // @access  Private
 exports.createDevice = asyncHandler(async (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    const count = await Device.count({ where: { userId: req.user.id } });
+    if ((count || 0) >= 1) {
+      return next(new ErrorResponse('Device limit reached (max 1 device per account)', 403));
+    }
+  }
+
   // Add user to req.body
   req.body.userId = req.user.id;
   if (req.body.user) delete req.body.user;

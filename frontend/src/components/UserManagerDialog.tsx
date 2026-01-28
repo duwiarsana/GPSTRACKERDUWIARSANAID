@@ -14,7 +14,21 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { apiService } from '../services/api';
+
+const FitBounds: React.FC<{ points: { lat: number; lng: number }[] }> = ({ points }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    if (!points.length) return;
+    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]));
+    map.fitBounds(bounds, { padding: [30, 30] });
+  }, [map, points]);
+  return null;
+};
 
 type Role = 'user' | 'admin';
 
@@ -25,6 +39,9 @@ type UserRow = {
   email?: string;
   role?: Role;
   createdAt?: string;
+  signupIp?: string | null;
+  signupLocation?: { lat: number; lng: number; accuracy?: number | null; source?: string; timestamp?: string } | null;
+  signupUserAgent?: string | null;
 };
 
 type Props = {
@@ -49,7 +66,23 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
   const [editPassword, setEditPassword] = useState('');
   const [editRole, setEditRole] = useState<Role>('user');
 
+  const [signupMapOpen, setSignupMapOpen] = useState(false);
+
   const isEditing = !!editTarget;
+
+  const signupRows = useMemo(() => {
+    const rows = (users || [])
+      .map((u) => {
+        const loc = (u as any)?.signupLocation;
+        const lat = Number(loc?.lat);
+        const lng = Number(loc?.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+        return { user: u, lat, lng };
+      })
+      .filter((v): v is { user: UserRow; lat: number; lng: number } => !!v);
+    return rows;
+  }, [users]);
 
   const editId = useMemo(() => {
     const u = editTarget as any;
@@ -246,6 +279,15 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
               <Button size="small" variant="text" onClick={loadUsers} disabled={loading} sx={{ fontWeight: 800 }}>
                 Refresh
               </Button>
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => setSignupMapOpen(true)}
+                disabled={loading || signupRows.length === 0}
+                sx={{ fontWeight: 800 }}
+              >
+                View Signup Map
+              </Button>
             </Stack>
 
             {loading ? (
@@ -258,6 +300,8 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
               const id = ((u as any)?.id || (u as any)?._id || '') as string;
               const label = `${u?.name || 'User'} (${u?.role || 'user'})`;
               const secondary = u?.email || id;
+              const loc = (u as any)?.signupLocation as any;
+              const hasLoc = loc && Number.isFinite(Number(loc.lat)) && Number.isFinite(Number(loc.lng));
               return (
                 <Paper key={id || secondary} variant="outlined" sx={{ p: 1.25, borderRadius: 2 }}>
                   <Stack direction="row" spacing={1.25} alignItems="center">
@@ -268,6 +312,16 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
                       <Typography variant="caption" color="text.secondary" noWrap>
                         {secondary}
                       </Typography>
+                      {(u as any)?.signupIp ? (
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                          IP: {(u as any)?.signupIp}
+                        </Typography>
+                      ) : null}
+                      {hasLoc ? (
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                          Signup: {Number(loc.lat).toFixed(5)}, {Number(loc.lng).toFixed(5)}
+                        </Typography>
+                      ) : null}
                     </Box>
                     <Box sx={{ flexGrow: 1 }} />
                     <Stack direction="row" spacing={1}>
@@ -291,6 +345,48 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
             })}
           </Stack>
         </Stack>
+
+        <Dialog open={signupMapOpen} onClose={() => setSignupMapOpen(false)} fullWidth maxWidth="md">
+          <DialogTitle>Signup Locations</DialogTitle>
+          <DialogContent>
+            <Box sx={{ height: 420, width: '100%', borderRadius: 2, overflow: 'hidden' }}>
+              <MapContainer center={[-6.2, 106.816666]} zoom={5} style={{ height: '100%', width: '100%' }}>
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <FitBounds points={signupRows.map((r) => ({ lat: r.lat, lng: r.lng }))} />
+                {signupRows.map((r) => {
+                  const u = r.user as any;
+                  const title = `${u?.name || 'User'} (${u?.email || ''})`;
+                  return (
+                    <CircleMarker key={(u?.id || u?._id || u?.email || title) as string} center={[r.lat, r.lng]} radius={8} pathOptions={{ color: '#1976d2' }}>
+                      <Popup>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>
+                          {title}
+                        </Typography>
+                        {u?.signupIp ? (
+                          <Typography variant="caption" color="text.secondary">
+                            IP: {u.signupIp}
+                          </Typography>
+                        ) : null}
+                        <br />
+                        <Typography variant="caption" color="text.secondary">
+                          {r.lat.toFixed(5)}, {r.lng.toFixed(5)}
+                        </Typography>
+                      </Popup>
+                    </CircleMarker>
+                  );
+                })}
+              </MapContainer>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSignupMapOpen(false)} sx={{ fontWeight: 900 }}>
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} sx={{ fontWeight: 900 }}>

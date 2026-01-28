@@ -4,6 +4,15 @@ export interface User {
   email: string;
   role: 'user' | 'admin';
   createdAt: string;
+  signupIp?: string | null;
+  signupLocation?: {
+    lat: number;
+    lng: number;
+    accuracy?: number | null;
+    source?: string;
+    timestamp?: string;
+  } | null;
+  signupUserAgent?: string | null;
 }
 
 export interface Device {
@@ -107,6 +116,11 @@ export interface LoginCredentials {
 export interface RegisterData extends LoginCredentials {
   name: string;
   role?: 'user' | 'admin';
+  signupLocation?: {
+    lat: number;
+    lng: number;
+    accuracy?: number | null;
+  } | null;
 }
 
 export interface AuthState {

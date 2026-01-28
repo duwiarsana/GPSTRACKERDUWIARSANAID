@@ -813,6 +813,7 @@ const DashboardPage: React.FC = () => {
                 direction={{ xs: 'column', md: 'row' }}
                 justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
                 spacing={{ xs: 1, md: 2 }}
+                useFlexGap
                 alignItems={{ xs: 'stretch', md: 'center' }}
                 sx={{ px: 1, flexWrap: 'wrap' }}
               >
@@ -849,6 +850,7 @@ const DashboardPage: React.FC = () => {
                   <Stack
                     direction={{ xs: 'column', md: 'row' }}
                     spacing={1.5}
+                    useFlexGap
                     alignItems="center"
                     sx={{ opacity: latestOnly ? 0.5 : 1, transition: 'opacity 250ms ease' }}
                   >
@@ -884,45 +886,55 @@ const DashboardPage: React.FC = () => {
                       />
                       <Button size={isMobile ? 'small' : 'medium'} variant="text" disabled={latestOnly} onClick={() => { setDateStr(null); setFromTimeStr(null); setToTimeStr(null); }} sx={{ width: { xs: '100%', md: 'auto' } }}>Clear</Button>
                   </Stack>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    size={isMobile ? 'small' : 'medium'}
-                    fullWidth={isMobile}
-                    sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}
-                    onClick={() => {
-                      if (!map) return;
-                      const indonesiaBounds = L.latLngBounds([[-11.0, 95.0], [6.5, 141.0]]);
-                      map.fitBounds(indonesiaBounds, { padding: [24, 24] });
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 1.25,
+                      justifyContent: { xs: 'stretch', md: 'flex-end' },
+                      width: { xs: '100%', md: 'auto' },
                     }}
                   >
-                    Reset View
-                  </Button>
-                  <Button variant="contained" startIcon={<HistoryIcon />} size={isMobile ? 'small' : 'medium'} fullWidth={isMobile} onClick={handlePingDevice} disabled={!cachedDevice && !selectedDevice} sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}>
-                    Ping Device
-                  </Button>
-                  {isAdmin ? (
                     <Button
                       variant="contained"
-                      color="info"
-                      onClick={() => setUserManagerOpen(true)}
+                      color="primary"
+                      size={isMobile ? 'small' : 'medium'}
+                      fullWidth={isMobile}
+                      sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}
+                      onClick={() => {
+                        if (!map) return;
+                        const indonesiaBounds = L.latLngBounds([[-11.0, 95.0], [6.5, 141.0]]);
+                        map.fitBounds(indonesiaBounds, { padding: [24, 24] });
+                      }}
+                    >
+                      Reset View
+                    </Button>
+                    <Button variant="contained" startIcon={<HistoryIcon />} size={isMobile ? 'small' : 'medium'} fullWidth={isMobile} onClick={handlePingDevice} disabled={!cachedDevice && !selectedDevice} sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}>
+                      Ping Device
+                    </Button>
+                    {isAdmin ? (
+                      <Button
+                        variant="contained"
+                        color="info"
+                        onClick={() => setUserManagerOpen(true)}
+                        size={isMobile ? 'small' : 'medium'}
+                        fullWidth={isMobile}
+                        sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}
+                      >
+                        User Manager
+                      </Button>
+                    ) : null}
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      onClick={() => dispatch(logout())}
                       size={isMobile ? 'small' : 'medium'}
                       fullWidth={isMobile}
                       sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}
                     >
-                      User Manager
+                      Logout
                     </Button>
-                  ) : null}
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={() => dispatch(logout())}
-                    size={isMobile ? 'small' : 'medium'}
-                    fullWidth={isMobile}
-                    sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}
-                  >
-                    Logout
-                  </Button>
+                  </Box>
               </Stack>
 
               <UserManagerDialog

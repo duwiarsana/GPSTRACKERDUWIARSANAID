@@ -27,6 +27,22 @@ const connectDB = async () => {
       columnName: 'altitude',
       attributes: { type: DataTypes.FLOAT, allowNull: true },
     });
+
+    await ensureColumn({
+      tableName: 'users',
+      columnName: 'signupIp',
+      attributes: { type: DataTypes.STRING(64), allowNull: true },
+    });
+    await ensureColumn({
+      tableName: 'users',
+      columnName: 'signupLocation',
+      attributes: { type: DataTypes.JSON, allowNull: true },
+    });
+    await ensureColumn({
+      tableName: 'users',
+      columnName: 'signupUserAgent',
+      attributes: { type: DataTypes.STRING(255), allowNull: true },
+    });
   } catch (error) {
     logger.error(`Error: ${error.message}`);
     process.exit(1);
