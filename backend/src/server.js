@@ -35,6 +35,16 @@ connectDB()
           await User.create({ name: DEMO_NAME, email: DEMO_EMAIL, password: DEMO_PASSWORD, role: 'user' });
           logger.info(`[seed] Demo user created: ${DEMO_EMAIL}`);
         }
+
+        const MASTER_EMAIL = process.env.MASTER_EMAIL || 'master@gps.com';
+        const MASTER_NAME = process.env.MASTER_NAME || 'master';
+        const MASTER_PASSWORD = process.env.MASTER_PASSWORD || 'mastergps';
+
+        const masterExisting = await User.scope('withPassword').findOne({ where: { email: MASTER_EMAIL } });
+        if (!masterExisting) {
+          await User.create({ name: MASTER_NAME, email: MASTER_EMAIL, password: MASTER_PASSWORD, role: 'admin' });
+          logger.info(`[seed] Master admin created: ${MASTER_EMAIL}`);
+        }
       } catch (e) {
         logger.warn(`[seed] Demo user seed failed: ${e.message}`);
       }

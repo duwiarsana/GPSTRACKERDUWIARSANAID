@@ -107,6 +107,7 @@ Backend and frontend also support individual start scripts from their folders.
 Default credentials:
 
 - **Demo (recommended for trying the app)**: `demo@gps.com / demogps`
+- **Master Admin (User Manager + monitor all devices)**: `master@gps.com / mastergps`
 - **Admin (if seeded)**: `admin@admin.com / admin123`
 
 ### One-command startup (recommended)

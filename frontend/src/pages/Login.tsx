@@ -21,12 +21,6 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleUseDemo = () => {
-    setEmail('demo@gps.com');
-    setPassword('demogps');
-    setFormError(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -67,11 +61,19 @@ const LoginPage: React.FC = () => {
           border: '1px solid rgba(255,255,255,0.08)',
         }}
       >
-        <Stack spacing={3} component="form" onSubmit={handleSubmit}>
+        <Stack spacing={3} component="form" onSubmit={handleSubmit} autoComplete="off">
           <Stack spacing={0.5} textAlign="center">
             <Typography variant="h5" fontWeight={700}>GPS Tracker</Typography>
             <Typography variant="body2" color="text.secondary">Silakan login untuk melanjutkan</Typography>
           </Stack>
+
+          <Alert severity="info">
+            Demo account:
+            <br />
+            Email: <b>demo@gps.com</b>
+            <br />
+            Password: <b>demogps</b>
+          </Alert>
 
           {(formError || error) && (
             <Alert severity="error">{formError || error}</Alert>
@@ -84,6 +86,8 @@ const LoginPage: React.FC = () => {
             onChange={(e) => setEmail(e.target.value)}
             fullWidth
             autoFocus
+            name="gps_email"
+            autoComplete="off"
             InputProps={{ startAdornment: (<InputAdornment position="start"><EmailIcon fontSize="small" /></InputAdornment>) }}
           />
 
@@ -93,15 +97,13 @@ const LoginPage: React.FC = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             fullWidth
+            name="gps_password"
+            autoComplete="new-password"
             InputProps={{ startAdornment: (<InputAdornment position="start"><LockIcon fontSize="small" /></InputAdornment>) }}
           />
 
           <Button type="submit" variant="contained" size="large" disabled={loading}>
             {loading ? 'Signing in...' : 'Login'}
-          </Button>
-
-          <Button type="button" variant="text" size="medium" disabled={loading} onClick={handleUseDemo}>
-            Use Demo Account
           </Button>
         </Stack>
       </Paper>

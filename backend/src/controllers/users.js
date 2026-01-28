@@ -45,8 +45,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/v1/users/:id
 // @access  Private/Admin
 exports.updateUser = asyncHandler(async (req, res, next) => {
-  await User.update(req.body, { where: { _id: req.params.id } });
-  const user = await User.findByPk(req.params.id);
+  const user = await User.scope('withPassword').findByPk(req.params.id);
 
   if (!user) {
     return next(
@@ -54,9 +53,20 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
     );
   }
 
+  const allowed = ['name', 'email', 'role', 'password'];
+  for (const key of allowed) {
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) {
+      user[key] = req.body[key];
+    }
+  }
+
+  await user.save();
+
+  const safeUser = await User.findByPk(req.params.id);
+
   res.status(200).json({
     success: true,
-    data: user
+    data: safeUser
   });
 });
 

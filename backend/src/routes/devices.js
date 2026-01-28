@@ -26,6 +26,13 @@ const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router({ mergeParams: true });
 
+const restrictToOwnDevices = (req, res, next) => {
+  if (req.user && req.user.role !== 'admin') {
+    req.query.userId = req.user.id;
+  }
+  next();
+};
+
 // Re-route into other resource routers
 // router.use('/:deviceId/locations', locationRoutes);
 
@@ -36,6 +43,7 @@ router.use(authorize('user', 'admin'));
 router
   .route('/')
   .get(
+    restrictToOwnDevices,
     advancedResults(Device, {
       path: 'user',
       select: 'name email'

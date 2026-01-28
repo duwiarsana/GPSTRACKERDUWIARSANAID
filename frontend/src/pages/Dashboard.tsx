@@ -18,6 +18,7 @@ import MetricCard from '../components/MetricCard';
 import DeviceList from '../components/DeviceList';
 import MapView from '../components/MapView';
 import LocationHistoryTable from '../components/LocationHistoryTable';
+import UserManagerDialog from '../components/UserManagerDialog';
 
 import { useAppDispatch, useAppSelector } from '../store/store';
 import {
@@ -44,7 +45,7 @@ const DashboardPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { isAuthenticated } = useAppSelector(selectAuth);
+  const { isAuthenticated, user } = useAppSelector(selectAuth);
   const devices = useAppSelector(selectDevices);
   const deviceLoading = useAppSelector(selectDeviceLoading);
   const selectedDevice = useAppSelector(selectCurrentDevice);
@@ -52,6 +53,10 @@ const DashboardPage: React.FC = () => {
   const stats = useAppSelector(selectDeviceStats);
   const locationsState = useAppSelector(selectDeviceLocationsState);
   const deviceError = useAppSelector(selectDeviceError);
+
+  const isAdmin = user?.role === 'admin';
+
+  const [userManagerOpen, setUserManagerOpen] = useState(false);
   const [geofence, setGeofence] = useState<any[] | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>(undefined);
   const [panelsVisible, setPanelsVisible] = useState<boolean>(true);
@@ -704,6 +709,22 @@ const DashboardPage: React.FC = () => {
                     </Stack>
                   )}
 
+                  {isAdmin ? (
+                    <>
+                      <Divider />
+                      <Button
+                        variant="outlined"
+                        onClick={() => {
+                          setSettingsOpen(false);
+                          setUserManagerOpen(true);
+                        }}
+                        sx={{ fontWeight: 900 }}
+                      >
+                        User Manager
+                      </Button>
+                    </>
+                  ) : null}
+
                   <Divider />
                   <Button variant="contained" color="secondary" onClick={() => dispatch(logout())} sx={{ fontWeight: 900 }}>
                     Logout
@@ -711,6 +732,12 @@ const DashboardPage: React.FC = () => {
                 </Stack>
               </Box>
             </SwipeableDrawer>
+
+            <UserManagerDialog
+              open={userManagerOpen}
+              onClose={() => setUserManagerOpen(false)}
+              currentUserEmail={user?.email || null}
+            />
           </>
         )}
       </Box>
@@ -874,6 +901,18 @@ const DashboardPage: React.FC = () => {
                   <Button variant="contained" startIcon={<HistoryIcon />} size={isMobile ? 'small' : 'medium'} fullWidth={isMobile} onClick={handlePingDevice} disabled={!cachedDevice && !selectedDevice} sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}>
                     Ping Device
                   </Button>
+                  {isAdmin ? (
+                    <Button
+                      variant="contained"
+                      color="info"
+                      onClick={() => setUserManagerOpen(true)}
+                      size={isMobile ? 'small' : 'medium'}
+                      fullWidth={isMobile}
+                      sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}
+                    >
+                      User Manager
+                    </Button>
+                  ) : null}
                   <Button
                     variant="contained"
                     color="secondary"
@@ -885,6 +924,12 @@ const DashboardPage: React.FC = () => {
                     Logout
                   </Button>
               </Stack>
+
+              <UserManagerDialog
+                open={userManagerOpen}
+                onClose={() => setUserManagerOpen(false)}
+                currentUserEmail={user?.email || null}
+              />
 
               {!isAuthenticated ? (
                 renderAuthNotice()
