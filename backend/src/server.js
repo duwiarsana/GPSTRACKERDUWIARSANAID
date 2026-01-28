@@ -9,6 +9,7 @@ const logger = require('./utils/logger');
 const { bootstrapInactivityTimers } = require('./utils/inactivity');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const User = require('./models/User');
 
 // Load env vars
 require('dotenv').config({ path: './.env' });
@@ -21,6 +22,23 @@ connectDB()
     } catch (e) {
       logger.error(`Inactivity bootstrap failed: ${e.message}`);
     }
+
+    // Seed demo user (for public demo/testing)
+    (async () => {
+      try {
+        const DEMO_EMAIL = process.env.DEMO_EMAIL || 'demo@gps.com';
+        const DEMO_NAME = process.env.DEMO_NAME || 'demo';
+        const DEMO_PASSWORD = process.env.DEMO_PASSWORD || 'demogps';
+
+        const existing = await User.scope('withPassword').findOne({ where: { email: DEMO_EMAIL } });
+        if (!existing) {
+          await User.create({ name: DEMO_NAME, email: DEMO_EMAIL, password: DEMO_PASSWORD, role: 'user' });
+          logger.info(`[seed] Demo user created: ${DEMO_EMAIL}`);
+        }
+      } catch (e) {
+        logger.warn(`[seed] Demo user seed failed: ${e.message}`);
+      }
+    })();
   })
   .catch((e) => {
     logger.error(`DB connect failed: ${e.message}`);

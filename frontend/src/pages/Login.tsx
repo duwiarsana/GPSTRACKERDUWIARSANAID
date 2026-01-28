@@ -17,9 +17,15 @@ import { login, selectAuth } from '../store/slices/authSlice';
 const LoginPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { loading, error } = useAppSelector(selectAuth);
-  const [email, setEmail] = useState('admin@admin.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+
+  const handleUseDemo = () => {
+    setEmail('demo@gps.com');
+    setPassword('demogps');
+    setFormError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +98,10 @@ const LoginPage: React.FC = () => {
 
           <Button type="submit" variant="contained" size="large" disabled={loading}>
             {loading ? 'Signing in...' : 'Login'}
+          </Button>
+
+          <Button type="button" variant="text" size="medium" disabled={loading} onClick={handleUseDemo}>
+            Use Demo Account
           </Button>
         </Stack>
       </Paper>

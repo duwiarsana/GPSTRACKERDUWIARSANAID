@@ -102,7 +102,12 @@ npm install
 npm run dev:all
 ```
 
-Backend and frontend also support individual start scripts from their folders. Default credentials (if seeded): `admin@admin.com / admin123`.
+Backend and frontend also support individual start scripts from their folders.
+
+Default credentials:
+
+- **Demo (recommended for trying the app)**: `demo@gps.com / demogps`
+- **Admin (if seeded)**: `admin@admin.com / admin123`
 
 ### One-command startup (recommended)
 
