@@ -65,6 +65,15 @@ async function calcTrip24hKm(deviceObjectId) {
 exports.getDevices = asyncHandler(async (req, res, next) => {
   const results = res.advancedResults;
   if (Array.isArray(results.data)) {
+    if (req.user && req.user.role !== 'admin') {
+      const uid = String(req.user.id || req.user._id || '');
+      results.data = results.data.filter((d) => {
+        const owner = d?.userId ?? d?.user;
+        return String(owner || '') === uid;
+      });
+      results.count = results.data.length;
+      results.pagination = {};
+    }
     results.data = results.data.map(applyStaleStatus);
   }
   res.status(200).json(results);
