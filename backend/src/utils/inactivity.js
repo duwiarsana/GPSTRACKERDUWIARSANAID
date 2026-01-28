@@ -1,4 +1,4 @@
-const { getIO } = require('./socket');
+const { getIO, ADMIN_ROOM, userRoom } = require('./socket');
 const logger = require('./logger');
 const telegram = require('../services/telegramService');
 const Device = require('../models/Device');
@@ -145,9 +145,24 @@ function scheduleInactive(deviceId, delayMs) {
   const timeoutMs = Number.isFinite(delayMs) ? Math.max(0, delayMs) : getTimeoutMs();
   const handle = setTimeout(async () => {
     try { logger.info(`[inactivity] timer fired for deviceId=${deviceId}`); } catch {}
+
+    let dev = null;
+    try {
+      dev = await Device.findOne({
+        where: { deviceId },
+        attributes: ['currentLocation', 'name', 'userId'],
+        raw: true,
+      });
+    } catch {}
+
     try {
       const io = getIO();
-      io.emit('deviceInactive', { deviceId, at: new Date().toISOString() });
+      const payload = { deviceId, at: new Date().toISOString() };
+      const ownerId = dev && dev.userId ? String(dev.userId) : null;
+      if (ownerId) {
+        io.to(userRoom(ownerId)).emit('deviceInactive', payload);
+      }
+      io.to(ADMIN_ROOM).emit('deviceInactive', payload);
     } catch {}
     // mark inactive and send telegram (with cooldown)
     const now = Date.now();
@@ -157,11 +172,13 @@ function scheduleInactive(deviceId, delayMs) {
       // fetch last known coords for link
       let linkBlock = '';
       try {
-        const dev = await Device.findOne({
-          where: { deviceId },
-          attributes: ['currentLocation', 'name'],
-          raw: true,
-        });
+        if (!dev) {
+          dev = await Device.findOne({
+            where: { deviceId },
+            attributes: ['currentLocation', 'name'],
+            raw: true,
+          });
+        }
         const coords = dev?.currentLocation?.coordinates;
         if (Array.isArray(coords) && coords.length >= 2) {
           const [lng, lat] = coords;

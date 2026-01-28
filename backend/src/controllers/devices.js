@@ -4,6 +4,7 @@ const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 const mqttService = require('../services/mqttService');
 const { getIO } = require('../utils/socket');
+const { ADMIN_ROOM, userRoom } = require('../utils/socket');
 const { bumpActivity } = require('../utils/inactivity');
 const sequelize = require('../config/sequelize');
 const { Op, fn, col } = require('sequelize');
@@ -554,7 +555,11 @@ exports.heartbeatById = asyncHandler(async (req, res, next) => {
   await device.save();
   try {
     const io = getIO();
-    io.emit('deviceHeartbeat', { deviceId: device.deviceId, lastSeen: device.lastSeen.toISOString() });
+    const payload = { deviceId: device.deviceId, lastSeen: device.lastSeen.toISOString() };
+    if (device.userId) {
+      io.to(userRoom(String(device.userId))).emit('deviceHeartbeat', payload);
+    }
+    io.to(ADMIN_ROOM).emit('deviceHeartbeat', payload);
   } catch {}
   try { bumpActivity(device.deviceId); } catch {}
   res.status(200).json({ success: true, data: applyStaleStatus(device) });
@@ -573,7 +578,11 @@ exports.heartbeatByDeviceId = asyncHandler(async (req, res, next) => {
   await device.save();
   try {
     const io = getIO();
-    io.emit('deviceHeartbeat', { deviceId: device.deviceId, lastSeen: device.lastSeen.toISOString() });
+    const payload = { deviceId: device.deviceId, lastSeen: device.lastSeen.toISOString() };
+    if (device.userId) {
+      io.to(userRoom(String(device.userId))).emit('deviceHeartbeat', payload);
+    }
+    io.to(ADMIN_ROOM).emit('deviceHeartbeat', payload);
   } catch {}
   try { bumpActivity(device.deviceId); } catch {}
   res.status(200).json({ success: true, data: applyStaleStatus(device) });

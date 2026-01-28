@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import { apiService } from '../../services/api';
 import type { Device, Location, DeviceStats } from '../../types';
+import { logout } from './authSlice';
 
 export interface DeviceState {
   devices: Device[];
@@ -142,6 +143,9 @@ const deviceSlice = createSlice({
   name: 'device',
   initialState,
   reducers: {
+    resetDeviceState: () => {
+      return initialState;
+    },
     clearDeviceError: (state) => {
       state.error = null;
     },
@@ -247,6 +251,11 @@ const deviceSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    // Clear device state on logout (prevents cross-account cached device visibility)
+    builder.addCase(logout.fulfilled, () => {
+      return initialState;
+    });
+
     // Fetch devices
     builder.addCase(fetchDevices.pending, (state) => {
       state.loading = true;
@@ -356,7 +365,7 @@ const deviceSlice = createSlice({
   },
 });
 
-export const { clearDeviceError, clearLocations, setCurrentDevice, updateDeviceLocation, applyHeartbeat, applyInactive, toggleRealtimeUpdates } = deviceSlice.actions;
+export const { resetDeviceState, clearDeviceError, clearLocations, setCurrentDevice, updateDeviceLocation, applyHeartbeat, applyInactive, toggleRealtimeUpdates } = deviceSlice.actions;
 
 export const selectDevices = (state: RootState) => state.device.devices;
 export const selectCurrentDevice = (state: RootState) => state.device.currentDevice;

@@ -26,6 +26,7 @@ import {
   fetchDevice,
   fetchDeviceLocations,
   fetchDeviceStats,
+  resetDeviceState,
   setCurrentDevice,
   selectDevices,
   selectCurrentDevice,
@@ -34,8 +35,8 @@ import {
   selectDeviceStats,
   selectDeviceError,
   selectDeviceLocationsState,
+  clearLocations,
 } from '../store/slices/deviceSlice';
-import { clearLocations } from '../store/slices/deviceSlice';
 import { selectAuth, logout } from '../store/slices/authSlice';
 import type { Device } from '../types';
 import useWebSocket from '../hooks/useWebSocket';
@@ -220,6 +221,12 @@ const DashboardPage: React.FC = () => {
     flush();
     return visits;
   }, [locations]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      dispatch(resetDeviceState());
+    }
+  }, [dispatch, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -927,7 +934,10 @@ const DashboardPage: React.FC = () => {
                     <Button
                       variant="contained"
                       color="secondary"
-                      onClick={() => dispatch(logout())}
+                      onClick={() => {
+                        dispatch(logout());
+                        dispatch(resetDeviceState());
+                      }}
                       size={isMobile ? 'small' : 'medium'}
                       fullWidth={isMobile}
                       sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}

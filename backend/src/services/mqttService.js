@@ -3,7 +3,7 @@ const Location = require('../models/Location');
 const Device = require('../models/Device');
 const logger = require('../utils/logger');
 const { handleGeofence } = require('./alertService');
-const { getIO } = require('../utils/socket');
+const { getIO, ADMIN_ROOM, userRoom } = require('../utils/socket');
 const { bumpActivity } = require('../utils/inactivity');
 
 class MQTTService {
@@ -140,7 +140,7 @@ class MQTTService {
       // Emit realtime update immediately (do not depend on history save)
       try {
         const io = getIO();
-        io.emit('locationUpdate', {
+        const payload = {
           deviceId,
           location: {
             location: { type: 'Point', coordinates: [longitude, latitude] },
@@ -151,7 +151,12 @@ class MQTTService {
             ...(battery ? { battery: { level: battery.level, isCharging: battery.isCharging } } : {}),
             ...(typeof satellites === 'number' ? { satellites } : {}),
           },
-        });
+        };
+        const ownerId = updated && updated.userId ? String(updated.userId) : null;
+        if (ownerId) {
+          io.to(userRoom(ownerId)).emit('locationUpdate', payload);
+        }
+        io.to(ADMIN_ROOM).emit('locationUpdate', payload);
       } catch {}
       try { bumpActivity(deviceId); } catch {}
     } catch (error) {
@@ -225,7 +230,7 @@ class MQTTService {
       // Emit realtime update
       try {
         const io = getIO();
-        io.emit('locationUpdate', {
+        const payload = {
           deviceId,
           location: {
             location: {
@@ -239,7 +244,16 @@ class MQTTService {
             ...(battery ? { battery: { level: battery.level, isCharging: battery.isCharging } } : {}),
             ...(typeof satellites === 'number' ? { satellites } : {}),
           }
-        });
+        };
+        let ownerId = null;
+        try {
+          const dev = await Device.findOne({ where: { deviceId }, attributes: ['userId'], raw: true });
+          ownerId = dev && dev.userId ? String(dev.userId) : null;
+        } catch {}
+        if (ownerId) {
+          io.to(userRoom(ownerId)).emit('locationUpdate', payload);
+        }
+        io.to(ADMIN_ROOM).emit('locationUpdate', payload);
       } catch (e) {
         // socket not initialized or other non-critical error
       }
