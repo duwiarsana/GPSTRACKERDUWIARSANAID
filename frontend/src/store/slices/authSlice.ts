@@ -72,6 +72,14 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    updateUserDetails: (state, action: PayloadAction<{ name?: string; email?: string }>) => {
+      if (!state.user) return;
+      state.user = {
+        ...state.user,
+        ...(typeof action.payload.name === 'string' ? { name: action.payload.name } : {}),
+        ...(typeof action.payload.email === 'string' ? { email: action.payload.email } : {}),
+      };
+    },
   },
   extraReducers: (builder) => {
     // Login
@@ -132,7 +140,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError } = authSlice.actions;
+export const { clearError, updateUserDetails } = authSlice.actions;
 
 export const selectAuth = (state: RootState) => state.auth;
 

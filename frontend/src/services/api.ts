@@ -26,6 +26,15 @@ export const API_URL = (() => {
   return `${window.location.origin}/api/v1`;
 })();
 
+const normalizeUser = (u: any) => {
+  if (!u || typeof u !== 'object') return u;
+  const id = (u as any).id ?? (u as any)._id;
+  return {
+    ...(u as any),
+    ...(id ? { id } : {}),
+  };
+};
+
 class ApiService {
   private api: AxiosInstance;
 
@@ -60,7 +69,12 @@ class ApiService {
 
   async getCurrentUser(): Promise<any> {
     const { data } = await this.api.get('/auth/me');
-    return data;
+    return normalizeUser((data as any)?.data ?? data);
+  }
+
+  async updateMyDetails(details: { name?: string; email?: string }): Promise<any> {
+    const { data } = await this.api.put('/auth/updatedetails', details);
+    return normalizeUser((data as any)?.data ?? data);
   }
 
   // Device endpoints
@@ -89,7 +103,11 @@ class ApiService {
   }
 
   // Location endpoints
-  async getDeviceLocations(deviceId: string, params?: Record<string, any>): Promise<{ data: Location[]; count: number }> {
+  async getDeviceLocations(
+    deviceId: string,
+    params?: Record<string, any>,
+    config: AxiosRequestConfig = {}
+  ): Promise<{ data: Location[]; count: number }> {
     const id = String(deviceId || '').trim();
     const isMongoId = id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id);
     const primary = isMongoId ? `/devices/${id}/locations` : `/devices/by-device-id/${encodeURIComponent(id)}/locations`;
@@ -97,16 +115,16 @@ class ApiService {
     // eslint-disable-next-line no-console
     console.debug('[api] getDeviceLocations primary', { id, isMongoId, url: primary });
     try {
-      const res = await this.api.get(primary, { params });
+      const res = await this.api.get(primary, { ...config, params });
       if (res?.data && Array.isArray(res.data.data) && res.data.data.length > 0) return res.data;
       // eslint-disable-next-line no-console
       console.debug('[api] getDeviceLocations alternate (empty)', alternate);
-      const res2 = await this.api.get(alternate, { params });
+      const res2 = await this.api.get(alternate, { ...config, params });
       return res2.data;
     } catch (e: any) {
       // eslint-disable-next-line no-console
       console.debug('[api] getDeviceLocations alternate (error)', alternate, e?.response?.status);
-      const res2 = await this.api.get(alternate, { params });
+      const res2 = await this.api.get(alternate, { ...config, params });
       return res2.data;
     }
   }

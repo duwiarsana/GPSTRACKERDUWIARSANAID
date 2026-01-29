@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Box, Container, Stack, Typography, Paper, Button, Chip, Divider, Skeleton, IconButton, Tooltip, Slide, FormControlLabel, Switch, TextField, useMediaQuery, SwipeableDrawer, List, ListItemButton, ListItemAvatar, ListItemText, Avatar } from '@mui/material';
+import { Box, Container, Stack, Typography, Paper, Button, Chip, Divider, Skeleton, IconButton, Tooltip, Slide, FormControlLabel, Switch, TextField, useMediaQuery, SwipeableDrawer, List, ListItemButton, ListItemAvatar, ListItemText, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, Menu, MenuItem, ListItemIcon } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import L from 'leaflet';
 import DevicesOtherIcon from '@mui/icons-material/DevicesOther';
@@ -13,6 +13,10 @@ import AltRouteIcon from '@mui/icons-material/AltRoute';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import LogoutIcon from '@mui/icons-material/Logout';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import PeopleIcon from '@mui/icons-material/People';
 
 import MetricCard from '../components/MetricCard';
 import DeviceList from '../components/DeviceList';
@@ -37,7 +41,7 @@ import {
   selectDeviceLocationsState,
   clearLocations,
 } from '../store/slices/deviceSlice';
-import { selectAuth, logout } from '../store/slices/authSlice';
+import { selectAuth, logout, updateUserDetails } from '../store/slices/authSlice';
 import type { Device } from '../types';
 import useWebSocket from '../hooks/useWebSocket';
 import { apiService } from '../services/api';
@@ -68,6 +72,17 @@ const DashboardPage: React.FC = () => {
   const [dateStr, setDateStr] = useState<string | null>(null); // YYYY-MM-DD
   const [fromTimeStr, setFromTimeStr] = useState<string | null>(null); // HH:MM
   const [toTimeStr, setToTimeStr] = useState<string | null>(null); // HH:MM
+
+  const [showAllPaths, setShowAllPaths] = useState<boolean>(false);
+  const [pathsByDeviceId, setPathsByDeviceId] = useState<Record<string, any[]>>({});
+  const [accountAnchorEl, setAccountAnchorEl] = useState<null | HTMLElement>(null);
+  const accountMenuOpen = Boolean(accountAnchorEl);
+
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [accountName, setAccountName] = useState<string>('');
+  const [accountEmail, setAccountEmail] = useState<string>('');
+  const [accountSaving, setAccountSaving] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
 
   const normalizeDate = useCallback((d: string | null): string | null => {
     const raw = String(d ?? '').trim();
@@ -230,6 +245,20 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
+      setShowAllPaths(false);
+      setPathsByDeviceId({});
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (latestOnly && showAllPaths) {
+      setShowAllPaths(false);
+      setPathsByDeviceId({});
+    }
+  }, [latestOnly, showAllPaths]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
       return;
     }
     dispatch(fetchDevices());
@@ -265,6 +294,62 @@ const DashboardPage: React.FC = () => {
       }
     })();
   }, [dispatch, selectedDeviceId]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (!showAllPaths) {
+      setPathsByDeviceId({});
+      return;
+    }
+    if (latestOnly) {
+      setPathsByDeviceId({});
+      return;
+    }
+    if (!devices || devices.length === 0) {
+      setPathsByDeviceId({});
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const MAX_DEVICES = 25;
+        const MAX_POINTS_PER_DEVICE = 200;
+        const list = devices.slice(0, MAX_DEVICES);
+        const entries = await Promise.all(
+          list.map(async (d: Device) => {
+            const id = String((d as any)?.deviceId || (d as any)?.id || (d as any)?._id || '');
+            if (!id) return [null, null] as any;
+            try {
+              const { data } = await apiService.getDeviceLocations(id, { limit: MAX_POINTS_PER_DEVICE }, { signal: controller.signal } as any);
+              return [id, Array.isArray(data) ? data : []] as any;
+            } catch {
+              return [id, []] as any;
+            }
+          })
+        );
+        if (cancelled) return;
+        const next: Record<string, any[]> = {};
+        for (const [k, v] of entries) {
+          if (!k) continue;
+          next[String(k)] = Array.isArray(v) ? v : [];
+        }
+        setPathsByDeviceId(next);
+      } catch {
+        if (cancelled) return;
+        setPathsByDeviceId({});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      try {
+        controller.abort();
+      } catch {}
+    };
+  }, [devices, isAuthenticated, latestOnly, showAllPaths]);
 
   // Cache last selected device to avoid UI blink while loading next one
   useEffect(() => {
@@ -408,6 +493,34 @@ const DashboardPage: React.FC = () => {
     sendCommand(deviceId, 'PING');
   };
 
+  const handleOpenAccount = () => {
+    setAccountName(user?.name || '');
+    setAccountEmail(user?.email || '');
+    setAccountError(null);
+    setAccountDialogOpen(true);
+  };
+
+  const handleSaveAccount = async () => {
+    if (!isAuthenticated) return;
+    const name = String(accountName || '').trim();
+    const email = String(accountEmail || '').trim();
+    if (!name || !email) {
+      setAccountError('Name and email are required');
+      return;
+    }
+    setAccountSaving(true);
+    setAccountError(null);
+    try {
+      await apiService.updateMyDetails({ name, email });
+      dispatch(updateUserDetails({ name, email }));
+      setAccountDialogOpen(false);
+    } catch (e: any) {
+      setAccountError(e?.response?.data?.error || 'Failed to update account');
+    } finally {
+      setAccountSaving(false);
+    }
+  };
+
   if (isMobile) {
     const headerDevice = (cachedDevice || selectedDevice) as any;
     const headerOnline = !!headerDevice?.isActive;
@@ -505,6 +618,13 @@ const DashboardPage: React.FC = () => {
                 </Stack>
               </Paper>
               <Paper elevation={0} sx={mobileControlSx}>
+                <Tooltip title="Account">
+                  <IconButton size="small" onClick={(e) => setAccountAnchorEl(e.currentTarget)}>
+                    <AccountCircleIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Paper>
+              <Paper elevation={0} sx={mobileControlSx}>
                 <Tooltip title="Settings">
                   <IconButton size="small" onClick={() => setSettingsOpen(true)}>
                     <TuneIcon fontSize="small" />
@@ -519,6 +639,7 @@ const DashboardPage: React.FC = () => {
                   device={selectedDevice}
                   devices={devices as unknown as Device[]}
                   locations={locations}
+                  pathsByDeviceId={showAllPaths && !latestOnly ? (pathsByDeviceId as any) : undefined}
                   height="100%"
                   bare
                   latestOnly={latestOnly}
@@ -674,6 +795,11 @@ const DashboardPage: React.FC = () => {
                     sx={{ ml: 0, mr: 0, justifyContent: 'space-between', '& .MuiFormControlLabel-label': { flexGrow: 1 } }}
                   />
                   <FormControlLabel
+                    control={<Switch color="primary" checked={showAllPaths} onChange={(e) => setShowAllPaths(e.target.checked)} disabled={latestOnly} />}
+                    label={<Typography variant="body2" sx={{ fontWeight: 800 }}>Show Paths (All devices)</Typography>}
+                    sx={{ ml: 0, mr: 0, justifyContent: 'space-between', '& .MuiFormControlLabel-label': { flexGrow: 1 } }}
+                  />
+                  <FormControlLabel
                     control={<Switch color="primary" checked={showAllDevices} onChange={handleToggleAllDevices} disabled={!latestOnly} />}
                     label={<Typography variant="body2" sx={{ fontWeight: 800 }}>Show All Devices</Typography>}
                     sx={{ ml: 0, mr: 0, justifyContent: 'space-between', '& .MuiFormControlLabel-label': { flexGrow: 1 } }}
@@ -715,30 +841,90 @@ const DashboardPage: React.FC = () => {
                       </Button>
                     </Stack>
                   )}
-
-                  {isAdmin ? (
-                    <>
-                      <Divider />
-                      <Button
-                        variant="outlined"
-                        onClick={() => {
-                          setSettingsOpen(false);
-                          setUserManagerOpen(true);
-                        }}
-                        sx={{ fontWeight: 900 }}
-                      >
-                        User Manager
-                      </Button>
-                    </>
-                  ) : null}
-
-                  <Divider />
-                  <Button variant="contained" color="secondary" onClick={() => dispatch(logout())} sx={{ fontWeight: 900 }}>
-                    Logout
-                  </Button>
                 </Stack>
               </Box>
             </SwipeableDrawer>
+
+            <Menu
+              anchorEl={accountAnchorEl}
+              open={accountMenuOpen}
+              onClose={() => setAccountAnchorEl(null)}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+              <MenuItem
+                onClick={() => {
+                  setAccountAnchorEl(null);
+                  handleOpenAccount();
+                }}
+              >
+                <ListItemIcon>
+                  <ManageAccountsIcon fontSize="small" />
+                </ListItemIcon>
+                Account
+              </MenuItem>
+              {isAdmin ? (
+                <MenuItem
+                  onClick={() => {
+                    setAccountAnchorEl(null);
+                    setUserManagerOpen(true);
+                  }}
+                >
+                  <ListItemIcon>
+                    <PeopleIcon fontSize="small" />
+                  </ListItemIcon>
+                  User Manager
+                </MenuItem>
+              ) : null}
+              <Divider />
+              <MenuItem
+                onClick={() => {
+                  setAccountAnchorEl(null);
+                  dispatch(logout());
+                  dispatch(resetDeviceState());
+                }}
+              >
+                <ListItemIcon>
+                  <LogoutIcon fontSize="small" />
+                </ListItemIcon>
+                Logout
+              </MenuItem>
+            </Menu>
+
+            <Dialog open={accountDialogOpen} onClose={() => setAccountDialogOpen(false)} fullWidth maxWidth="xs">
+              <DialogTitle>Account</DialogTitle>
+              <DialogContent>
+                <Stack spacing={1.5} sx={{ pt: 1 }}>
+                  <TextField
+                    label="Name"
+                    value={accountName}
+                    onChange={(e) => setAccountName(e.target.value)}
+                    fullWidth
+                    disabled={accountSaving}
+                  />
+                  <TextField
+                    label="Email"
+                    value={accountEmail}
+                    onChange={(e) => setAccountEmail(e.target.value)}
+                    fullWidth
+                    disabled={accountSaving}
+                  />
+                  {accountError ? (
+                    <Typography variant="caption" color="error">
+                      {accountError}
+                    </Typography>
+                  ) : null}
+                </Stack>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setAccountDialogOpen(false)} disabled={accountSaving}>
+                  Cancel
+                </Button>
+                <Button variant="contained" onClick={handleSaveAccount} disabled={accountSaving}>
+                  Save
+                </Button>
+              </DialogActions>
+            </Dialog>
 
             <UserManagerDialog
               open={userManagerOpen}
@@ -760,6 +946,7 @@ const DashboardPage: React.FC = () => {
             device={selectedDevice}
             devices={devices as unknown as Device[]}
             locations={locations}
+            pathsByDeviceId={showAllPaths && !latestOnly ? (pathsByDeviceId as any) : undefined}
             height="100vh"
             bare
             latestOnly={latestOnly}
@@ -847,6 +1034,14 @@ const DashboardPage: React.FC = () => {
                     }
                   />
                   <FormControlLabel
+                    control={<Switch color="primary" checked={showAllPaths} onChange={(e) => setShowAllPaths(e.target.checked)} disabled={latestOnly} />}
+                    label={
+                      <Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: { xs: 11, md: 13 } }}>
+                        SHOW PATHS (ALL)
+                      </Typography>
+                    }
+                  />
+                  <FormControlLabel
                     control={<Switch color="primary" checked={showAllDevices} onChange={(e) => setShowAllDevices(e.target.checked)} disabled={!latestOnly} />}
                     label={
                       <Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: { xs: 11, md: 13 } }}>
@@ -920,32 +1115,96 @@ const DashboardPage: React.FC = () => {
                       Ping Device
                     </Button>
                     {isAdmin ? (
-                      <Button
-                        variant="contained"
-                        color="info"
-                        onClick={() => setUserManagerOpen(true)}
-                        size={isMobile ? 'small' : 'medium'}
-                        fullWidth={isMobile}
-                        sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}
-                      >
-                        User Manager
-                      </Button>
+                      <></>
                     ) : null}
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      onClick={() => {
-                        dispatch(logout());
-                        dispatch(resetDeviceState());
-                      }}
-                      size={isMobile ? 'small' : 'medium'}
-                      fullWidth={isMobile}
-                      sx={{ boxShadow: '0 6px 16px rgba(15,23,42,0.18)' }}
+                    <IconButton
+                      color="primary"
+                      onClick={(e) => setAccountAnchorEl(e.currentTarget)}
+                      sx={{ width: 44, height: 44, bgcolor: 'rgba(255,255,255,0.8)', boxShadow: '0 6px 16px rgba(15,23,42,0.12)' }}
                     >
-                      Logout
-                    </Button>
+                      <AccountCircleIcon />
+                    </IconButton>
                   </Box>
               </Stack>
+
+              <Menu
+                anchorEl={accountAnchorEl}
+                open={accountMenuOpen}
+                onClose={() => setAccountAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              >
+                <MenuItem
+                  onClick={() => {
+                    setAccountAnchorEl(null);
+                    handleOpenAccount();
+                  }}
+                >
+                  <ListItemIcon>
+                    <ManageAccountsIcon fontSize="small" />
+                  </ListItemIcon>
+                  Account
+                </MenuItem>
+                {isAdmin ? (
+                  <MenuItem
+                    onClick={() => {
+                      setAccountAnchorEl(null);
+                      setUserManagerOpen(true);
+                    }}
+                  >
+                    <ListItemIcon>
+                      <PeopleIcon fontSize="small" />
+                    </ListItemIcon>
+                    User Manager
+                  </MenuItem>
+                ) : null}
+                <Divider />
+                <MenuItem
+                  onClick={() => {
+                    setAccountAnchorEl(null);
+                    dispatch(logout());
+                    dispatch(resetDeviceState());
+                  }}
+                >
+                  <ListItemIcon>
+                    <LogoutIcon fontSize="small" />
+                  </ListItemIcon>
+                  Logout
+                </MenuItem>
+              </Menu>
+
+              <Dialog open={accountDialogOpen} onClose={() => setAccountDialogOpen(false)} fullWidth maxWidth="xs">
+                <DialogTitle>Account</DialogTitle>
+                <DialogContent>
+                  <Stack spacing={1.5} sx={{ pt: 1 }}>
+                    <TextField
+                      label="Name"
+                      value={accountName}
+                      onChange={(e) => setAccountName(e.target.value)}
+                      fullWidth
+                      disabled={accountSaving}
+                    />
+                    <TextField
+                      label="Email"
+                      value={accountEmail}
+                      onChange={(e) => setAccountEmail(e.target.value)}
+                      fullWidth
+                      disabled={accountSaving}
+                    />
+                    {accountError ? (
+                      <Typography variant="caption" color="error">
+                        {accountError}
+                      </Typography>
+                    ) : null}
+                  </Stack>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setAccountDialogOpen(false)} disabled={accountSaving}>Cancel</Button>
+                  <Button variant="contained" onClick={handleSaveAccount} disabled={accountSaving}>
+                    Save
+                  </Button>
+                </DialogActions>
+              </Dialog>
 
               <UserManagerDialog
                 open={userManagerOpen}

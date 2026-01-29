@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, Fragment } from 'react';
 import { Paper, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { MapContainer, TileLayer, useMap, useMapEvents, Polyline, CircleMarker, Tooltip, ZoomControl, Popup } from 'react-leaflet';
@@ -22,6 +22,7 @@ interface MapViewProps {
   device?: Device | null;
   devices?: Device[];
   locations: Location[];
+  pathsByDeviceId?: Record<string, Location[]>;
   height?: number | string;
   bare?: boolean;
   latestOnly?: boolean;
@@ -70,7 +71,7 @@ const PopupCloseListener: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return null;
 };
 
-const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 420, bare = false, latestOnly = true, showAllDevices = false, autoFit = false, onMapReady, onSelectDevice, from, to, statsLatest = null, forceTick, activeId, allowCacheLatest = false, geofence = null }) => {
+const MapView: React.FC<MapViewProps> = ({ device, devices, locations, pathsByDeviceId, height = 420, bare = false, latestOnly = true, showAllDevices = false, autoFit = false, onMapReady, onSelectDevice, from, to, statsLatest = null, forceTick, activeId, allowCacheLatest = false, geofence = null }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [openPopupId, setOpenPopupId] = useState<string | null>(null);
@@ -83,6 +84,16 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
     } catch {
       return null;
     }
+  }, []);
+
+  const pathColorFor = useCallback((key: string): string => {
+    const raw = String(key || 'device');
+    let hash = 0;
+    for (let i = 0; i < raw.length; i += 1) {
+      hash = (hash * 31 + raw.charCodeAt(i)) | 0;
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 78%, 42%)`;
   }, []);
   // Helpers for coordinate validation and normalization (auto-swap if obviously reversed)
   const isValid = (lat: number, lng: number) => isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && !(lat === 0 && lng === 0);
@@ -693,6 +704,62 @@ const MapView: React.FC<MapViewProps> = ({ device, devices, locations, height = 
             // Apply time range filtering if provided
             const fromTs = from ? new Date(from as any).getTime() : Number.NEGATIVE_INFINITY;
             const toTs = to ? new Date(to as any).getTime() : Number.POSITIVE_INFINITY;
+
+            const pathEntries = pathsByDeviceId ? Object.entries(pathsByDeviceId) : [];
+            if (pathEntries.length > 0) {
+              return (
+                <>
+                  {pathEntries.map(([devId, devLocs]) => {
+                    const sorted = (Array.isArray(devLocs) ? devLocs : [])
+                      .filter((l) => {
+                        const t = new Date((l as any).timestamp ?? Date.now()).getTime();
+                        return t >= fromTs && t <= toTs;
+                      })
+                      .sort(
+                        (a, b) =>
+                          new Date((a as any).timestamp ?? Date.now()).getTime() -
+                          new Date((b as any).timestamp ?? Date.now()).getTime()
+                      );
+
+                    if (sorted.length < 2) return null;
+
+                    const positions = sorted
+                      .map((l) => {
+                        const coords = (l as any)?.location?.coordinates as [number, number] | undefined;
+                        if (!Array.isArray(coords) || coords.length < 2) return null;
+                        const n = normalize(coords[0], coords[1]);
+                        if (!n) return null;
+                        const [lng, lat] = n;
+                        if (!isInBoundsID(lat, lng)) return null;
+                        return [lat, lng] as [number, number];
+                      })
+                      .filter((v): v is [number, number] => !!v);
+
+                    if (positions.length < 2) return null;
+
+                    const color = pathColorFor(devId);
+                    const last = positions[positions.length - 1];
+                    const label = devices?.find((d) => String((d as any)?.deviceId || '') === String(devId))?.name || String(devId);
+
+                    return (
+                      <Fragment key={`pathgrp-${devId}`}>
+                        <Polyline key={`path-${devId}`} positions={positions} pathOptions={{ color, weight: 3, opacity: 0.7 }} />
+                        <CircleMarker
+                          key={`end-${devId}`}
+                          center={last}
+                          radius={5}
+                          pathOptions={{ color: '#000000', weight: 2, fillColor: color, fillOpacity: 1 }}
+                        >
+                          <Tooltip className="device-label" direction="top" offset={[0, -10]} opacity={1} permanent>
+                            {label}
+                          </Tooltip>
+                        </CircleMarker>
+                      </Fragment>
+                    );
+                  })}
+                </>
+              );
+            }
             const effective = (stickyLatest || latest) as Location | null;
             const filtered = (locations && locations.length > 0 ? locations : (effective ? [effective] : []))
               .filter((l) => {
