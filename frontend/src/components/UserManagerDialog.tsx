@@ -14,7 +14,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle, CircleMarker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiService } from '../services/api';
@@ -43,6 +43,21 @@ const InvalidateSize: React.FC<{ tick: any }> = ({ tick }) => {
     }, 0);
     return () => window.clearTimeout(t);
   }, [map, tick]);
+  return null;
+};
+
+const FlyToPoint: React.FC<{ point: { lat: number; lng: number } | null; tick: any }> = ({ point, tick }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    if (!point) return;
+    const t = window.setTimeout(() => {
+      map.invalidateSize();
+      const z = Math.max(map.getZoom(), 13);
+      map.flyTo([point.lat, point.lng], z, { duration: 0.6 });
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [map, point, tick]);
   return null;
 };
 
@@ -75,6 +90,16 @@ type UserRow = {
   signupUserAgent?: string | null;
 };
 
+type SignupRow = {
+  user: UserRow;
+  lat: number;
+  lng: number;
+  accuracy: number | null;
+  source: string | undefined;
+  timestamp: string | undefined;
+  key: string;
+};
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -98,21 +123,40 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
   const [editRole, setEditRole] = useState<Role>('user');
 
   const [signupMapOpen, setSignupMapOpen] = useState(false);
+  const [signupFocusKey, setSignupFocusKey] = useState<string | null>(null);
 
   const isEditing = !!editTarget;
 
   const signupRows = useMemo(() => {
     const rows = (users || [])
-      .map((u) => {
+      .map((u): SignupRow | null => {
         const loc = parseSignupLocation((u as any)?.signupLocation);
         const lat = Number(loc?.lat);
         const lng = Number(loc?.lng);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-        return { user: u, lat, lng };
+        const accuracyRaw = loc?.accuracy != null ? Number((loc as any)?.accuracy) : null;
+        const accuracy = Number.isFinite(accuracyRaw as any) ? (accuracyRaw as any as number) : null;
+        const source = typeof (loc as any)?.source === 'string' ? String((loc as any)?.source) : undefined;
+        const timestamp = typeof (loc as any)?.timestamp === 'string' ? String((loc as any)?.timestamp) : undefined;
+        const key = String((u as any)?.id || (u as any)?._id || (u as any)?.email || '').trim() || `${lat},${lng}`;
+        return { user: u, lat, lng, accuracy, source, timestamp, key };
       })
-      .filter((v): v is { user: UserRow; lat: number; lng: number } => !!v);
+      .filter((v): v is SignupRow => v !== null);
     return rows;
   }, [users]);
+
+  const signupSummary = useMemo(() => {
+    const total = (users || []).length;
+    const withLoc = signupRows.length;
+    return { total, withLoc, withoutLoc: Math.max(0, total - withLoc) };
+  }, [users, signupRows]);
+
+  const focusedSignupPoint = useMemo(() => {
+    if (!signupFocusKey) return null;
+    const row = signupRows.find((r) => r.key === signupFocusKey);
+    if (!row) return null;
+    return { lat: row.lat, lng: row.lng };
+  }, [signupFocusKey, signupRows]);
 
   const editId = useMemo(() => {
     const u = editTarget as any;
@@ -142,6 +186,13 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
     if (!open) return;
     loadUsers();
   }, [open, loadUsers]);
+
+  useEffect(() => {
+    if (!signupMapOpen) return;
+    if (signupRows.length === 0) return;
+    if (signupFocusKey) return;
+    setSignupFocusKey(signupRows[0]?.key || null);
+  }, [signupMapOpen, signupRows, signupFocusKey]);
 
   const handleCreate = async () => {
     setError(null);
@@ -373,41 +424,136 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
         <Dialog open={signupMapOpen} onClose={() => setSignupMapOpen(false)} fullWidth maxWidth="md">
           <DialogTitle>Signup Locations</DialogTitle>
           <DialogContent>
+            <Alert severity="info" sx={{ mb: 1.5 }}>
+              Users with location: <b>{signupSummary.withLoc}</b> / <b>{signupSummary.total}</b>
+              {signupSummary.withoutLoc > 0 ? (
+                <>
+                  {' '}
+                  (missing: <b>{signupSummary.withoutLoc}</b>)
+                </>
+              ) : null}
+            </Alert>
             {signupRows.length === 0 ? (
               <Alert severity="info">Tidak ada data lokasi signup yang tersimpan.</Alert>
             ) : null}
-            <Box sx={{ height: 420, width: '100%', borderRadius: 2, overflow: 'hidden', mt: signupRows.length === 0 ? 1.5 : 0 }}>
-              <MapContainer center={[-6.2, 106.816666]} zoom={5} style={{ height: '100%', width: '100%' }}>
-                <InvalidateSize tick={signupMapOpen} />
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <FitBounds points={signupRows.map((r) => ({ lat: r.lat, lng: r.lng }))} />
-                {signupRows.map((r) => {
-                  const u = r.user as any;
-                  const title = `${u?.name || 'User'} (${u?.email || ''})`;
-                  return (
-                    <CircleMarker key={(u?.id || u?._id || u?.email || title) as string} center={[r.lat, r.lng]} radius={8} pathOptions={{ color: '#1976d2' }}>
-                      <Popup>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>
-                          {title}
-                        </Typography>
-                        {u?.signupIp ? (
-                          <Typography variant="caption" color="text.secondary">
-                            IP: {u.signupIp}
-                          </Typography>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ mt: signupRows.length === 0 ? 1.5 : 0 }}>
+              <Box sx={{ height: 440, width: '100%', borderRadius: 2, overflow: 'hidden', flex: 1 }}>
+                <MapContainer center={[-6.2, 106.816666]} zoom={5} style={{ height: '100%', width: '100%' }}>
+                  <InvalidateSize tick={signupMapOpen} />
+                  <FlyToPoint point={focusedSignupPoint} tick={signupMapOpen} />
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <FitBounds points={signupRows.map((r) => ({ lat: r.lat, lng: r.lng }))} />
+                  {signupRows.map((r) => {
+                    const u = r.user as any;
+                    const title = `${u?.name || 'User'} (${u?.email || ''})`;
+                    const ts = r.timestamp ? new Date(r.timestamp) : null;
+                    const tsLabel = ts && !Number.isNaN(ts.getTime()) ? ts.toLocaleString() : null;
+                    const accuracy = r.accuracy != null ? Math.max(5, Math.min(10000, r.accuracy)) : null;
+                    const isFocused = signupFocusKey && r.key === signupFocusKey;
+                    return (
+                      <Box key={r.key}>
+                        {accuracy ? (
+                          <Circle
+                            center={[r.lat, r.lng]}
+                            radius={accuracy}
+                            pathOptions={{ color: isFocused ? '#1565c0' : '#1976d2', weight: 1, opacity: 0.45, fillOpacity: 0.08 }}
+                          />
                         ) : null}
-                        <br />
-                        <Typography variant="caption" color="text.secondary">
-                          {r.lat.toFixed(5)}, {r.lng.toFixed(5)}
-                        </Typography>
-                      </Popup>
-                    </CircleMarker>
-                  );
-                })}
-              </MapContainer>
-            </Box>
+                        <CircleMarker
+                          center={[r.lat, r.lng]}
+                          radius={isFocused ? 10 : 8}
+                          pathOptions={{ color: isFocused ? '#1565c0' : '#1976d2' }}
+                          eventHandlers={{
+                            click: () => setSignupFocusKey(r.key),
+                          }}
+                        >
+                          <Popup>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>
+                              {title}
+                            </Typography>
+                            {u?.signupIp ? (
+                              <Typography variant="caption" color="text.secondary">
+                                IP: {u.signupIp}
+                              </Typography>
+                            ) : null}
+                            <br />
+                            <Typography variant="caption" color="text.secondary">
+                              {r.lat.toFixed(5)}, {r.lng.toFixed(5)}
+                            </Typography>
+                            {accuracy ? (
+                              <>
+                                <br />
+                                <Typography variant="caption" color="text.secondary">
+                                  Accuracy: {Math.round(accuracy)} m
+                                </Typography>
+                              </>
+                            ) : null}
+                            {r.source ? (
+                              <>
+                                <br />
+                                <Typography variant="caption" color="text.secondary">
+                                  Source: {r.source}
+                                </Typography>
+                              </>
+                            ) : null}
+                            {tsLabel ? (
+                              <>
+                                <br />
+                                <Typography variant="caption" color="text.secondary">
+                                  Time: {tsLabel}
+                                </Typography>
+                              </>
+                            ) : null}
+                          </Popup>
+                        </CircleMarker>
+                      </Box>
+                    );
+                  })}
+                </MapContainer>
+              </Box>
+              <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2, width: { xs: '100%', md: 320 }, maxHeight: 440, overflow: 'auto' }}>
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>
+                    Focus
+                  </Typography>
+                  {signupRows.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      Tidak ada titik lokasi untuk difokuskan.
+                    </Typography>
+                  ) : null}
+                  {signupRows.map((r) => {
+                    const u = r.user as any;
+                    const name = String(u?.name || 'User');
+                    const email = String(u?.email || '').trim();
+                    const isFocused = signupFocusKey && r.key === signupFocusKey;
+                    const accuracy = r.accuracy != null ? Math.max(5, Math.min(10000, r.accuracy)) : null;
+                    return (
+                      <Button
+                        key={`focus-${r.key}`}
+                        variant={isFocused ? 'contained' : 'text'}
+                        size="small"
+                        onClick={() => setSignupFocusKey(r.key)}
+                        sx={{ justifyContent: 'flex-start', textTransform: 'none', fontWeight: isFocused ? 900 : 700 }}
+                        fullWidth
+                      >
+                        <Box sx={{ minWidth: 0, textAlign: 'left' }}>
+                          <Typography variant="body2" noWrap sx={{ fontWeight: 900 }}>
+                            {name}
+                          </Typography>
+                          <Typography variant="caption" color={isFocused ? 'inherit' : 'text.secondary'} noWrap>
+                            {email || `${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}`}
+                            {accuracy ? ` • ±${Math.round(accuracy)}m` : ''}
+                          </Typography>
+                        </Box>
+                      </Button>
+                    );
+                  })}
+                </Stack>
+              </Paper>
+            </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setSignupMapOpen(false)} sx={{ fontWeight: 900 }}>
