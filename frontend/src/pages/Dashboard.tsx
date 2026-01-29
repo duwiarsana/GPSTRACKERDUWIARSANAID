@@ -72,9 +72,6 @@ const DashboardPage: React.FC = () => {
   const [dateStr, setDateStr] = useState<string | null>(null); // YYYY-MM-DD
   const [fromTimeStr, setFromTimeStr] = useState<string | null>(null); // HH:MM
   const [toTimeStr, setToTimeStr] = useState<string | null>(null); // HH:MM
-
-  const [showAllPaths, setShowAllPaths] = useState<boolean>(false);
-  const [pathsByDeviceId, setPathsByDeviceId] = useState<Record<string, any[]>>({});
   const [accountAnchorEl, setAccountAnchorEl] = useState<null | HTMLElement>(null);
   const accountMenuOpen = Boolean(accountAnchorEl);
 
@@ -245,17 +242,9 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      setShowAllPaths(false);
-      setPathsByDeviceId({});
+      // no-op
     }
   }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (latestOnly && showAllPaths) {
-      setShowAllPaths(false);
-      setPathsByDeviceId({});
-    }
-  }, [latestOnly, showAllPaths]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -294,62 +283,6 @@ const DashboardPage: React.FC = () => {
       }
     })();
   }, [dispatch, selectedDeviceId]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    if (!showAllPaths) {
-      setPathsByDeviceId({});
-      return;
-    }
-    if (latestOnly) {
-      setPathsByDeviceId({});
-      return;
-    }
-    if (!devices || devices.length === 0) {
-      setPathsByDeviceId({});
-      return;
-    }
-
-    let cancelled = false;
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const MAX_DEVICES = 25;
-        const MAX_POINTS_PER_DEVICE = 200;
-        const list = devices.slice(0, MAX_DEVICES);
-        const entries = await Promise.all(
-          list.map(async (d: Device) => {
-            const id = String((d as any)?.deviceId || (d as any)?.id || (d as any)?._id || '');
-            if (!id) return [null, null] as any;
-            try {
-              const { data } = await apiService.getDeviceLocations(id, { limit: MAX_POINTS_PER_DEVICE }, { signal: controller.signal } as any);
-              return [id, Array.isArray(data) ? data : []] as any;
-            } catch {
-              return [id, []] as any;
-            }
-          })
-        );
-        if (cancelled) return;
-        const next: Record<string, any[]> = {};
-        for (const [k, v] of entries) {
-          if (!k) continue;
-          next[String(k)] = Array.isArray(v) ? v : [];
-        }
-        setPathsByDeviceId(next);
-      } catch {
-        if (cancelled) return;
-        setPathsByDeviceId({});
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      try {
-        controller.abort();
-      } catch {}
-    };
-  }, [devices, isAuthenticated, latestOnly, showAllPaths]);
 
   // Cache last selected device to avoid UI blink while loading next one
   useEffect(() => {
@@ -639,7 +572,6 @@ const DashboardPage: React.FC = () => {
                   device={selectedDevice}
                   devices={devices as unknown as Device[]}
                   locations={locations}
-                  pathsByDeviceId={showAllPaths && !latestOnly ? (pathsByDeviceId as any) : undefined}
                   height="100%"
                   bare
                   latestOnly={latestOnly}
@@ -795,11 +727,6 @@ const DashboardPage: React.FC = () => {
                     sx={{ ml: 0, mr: 0, justifyContent: 'space-between', '& .MuiFormControlLabel-label': { flexGrow: 1 } }}
                   />
                   <FormControlLabel
-                    control={<Switch color="primary" checked={showAllPaths} onChange={(e) => setShowAllPaths(e.target.checked)} disabled={latestOnly} />}
-                    label={<Typography variant="body2" sx={{ fontWeight: 800 }}>Show Paths (All devices)</Typography>}
-                    sx={{ ml: 0, mr: 0, justifyContent: 'space-between', '& .MuiFormControlLabel-label': { flexGrow: 1 } }}
-                  />
-                  <FormControlLabel
                     control={<Switch color="primary" checked={showAllDevices} onChange={handleToggleAllDevices} disabled={!latestOnly} />}
                     label={<Typography variant="body2" sx={{ fontWeight: 800 }}>Show All Devices</Typography>}
                     sx={{ ml: 0, mr: 0, justifyContent: 'space-between', '& .MuiFormControlLabel-label': { flexGrow: 1 } }}
@@ -946,7 +873,6 @@ const DashboardPage: React.FC = () => {
             device={selectedDevice}
             devices={devices as unknown as Device[]}
             locations={locations}
-            pathsByDeviceId={showAllPaths && !latestOnly ? (pathsByDeviceId as any) : undefined}
             height="100vh"
             bare
             latestOnly={latestOnly}
@@ -1009,7 +935,14 @@ const DashboardPage: React.FC = () => {
                 spacing={{ xs: 1, md: 2 }}
                 useFlexGap
                 alignItems={{ xs: 'stretch', md: 'center' }}
-                sx={{ px: 1, flexWrap: 'wrap' }}
+                sx={{
+                  px: 1,
+                  flexWrap: { xs: 'wrap', md: 'nowrap' },
+                  overflowX: { md: 'auto' },
+                  overflowY: 'hidden',
+                  WebkitOverflowScrolling: 'touch',
+                  '& > *': { flexShrink: 0 },
+                }}
               >
                   <Chip
                     icon={<SatelliteAltIcon />}
@@ -1030,14 +963,6 @@ const DashboardPage: React.FC = () => {
                     label={
                       <Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: { xs: 11, md: 13 } }}>
                         SHOW PATH
-                      </Typography>
-                    }
-                  />
-                  <FormControlLabel
-                    control={<Switch color="primary" checked={showAllPaths} onChange={(e) => setShowAllPaths(e.target.checked)} disabled={latestOnly} />}
-                    label={
-                      <Typography variant="button" sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: { xs: 11, md: 13 } }}>
-                        SHOW PATHS (ALL)
                       </Typography>
                     }
                   />
@@ -1091,7 +1016,7 @@ const DashboardPage: React.FC = () => {
                   <Box
                     sx={{
                       display: 'flex',
-                      flexWrap: 'wrap',
+                      flexWrap: { xs: 'wrap', md: 'nowrap' },
                       gap: 1.25,
                       justifyContent: { xs: 'stretch', md: 'flex-end' },
                       width: { xs: '100%', md: 'auto' },
@@ -1237,6 +1162,7 @@ const DashboardPage: React.FC = () => {
                         showPath={!latestOnly}
                         pathDistanceKm={tripDistanceKm}
                         pathDistanceLoading={locationsState.loading}
+                        allowCreate={!isAdmin}
                       />
                       {deviceError && (
                         <Paper sx={{ ...glassPanelSx, p: 2 }}>

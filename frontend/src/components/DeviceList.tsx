@@ -31,9 +31,10 @@ interface DeviceListProps {
   showPath?: boolean;
   pathDistanceKm?: number;
   pathDistanceLoading?: boolean;
+  allowCreate?: boolean;
 }
 
-const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, loading, containerSx, onRefresh, showPath = false, pathDistanceKm, pathDistanceLoading = false }) => {
+const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, loading, containerSx, onRefresh, showPath = false, pathDistanceKm, pathDistanceLoading = false, allowCreate = true }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const mergeSx = (base: SxProps<Theme>): SxProps<Theme> =>
@@ -322,11 +323,11 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
             </Typography>
             <Stack direction="row" spacing={1} alignItems="center">
               <Chip label={`0 total`} size="small" color="primary" variant="outlined" />
-              {!isMobile && (
+              {!isMobile && allowCreate ? (
                 <Button size="small" variant="contained" onClick={() => setOpen(true)}>
                   Add Device
                 </Button>
-              )}
+              ) : null}
             </Stack>
           </Stack>
         </Box>
@@ -336,49 +337,51 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
             Register a device to start tracking locations.
           </Typography>
         </Box>
-        <Dialog open={open} onClose={() => !submitting && setOpen(false)} fullWidth maxWidth="xs">
-          <DialogTitle>Add Device</DialogTitle>
-          <DialogContent sx={{ pt: 1, overflow: 'visible' }}>
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-            <Stack spacing={2}>
-              <TextField
-                label="Device ID"
-                value={deviceId}
-                onChange={(e) => setDeviceId(e.target.value)}
-                fullWidth
-                autoFocus
-                disabled={submitting}
-                variant="outlined"
-                autoComplete="off"
-                sx={{
-                  '& .MuiOutlinedInput-root': { overflow: 'visible' },
-                  '& .MuiOutlinedInput-notchedOutline': { overflow: 'visible' },
-                  '& .MuiOutlinedInput-root > fieldset': { overflow: 'visible' },
-                  '& .MuiInputLabel-root': { overflow: 'visible', zIndex: 2 },
-                }}
-              />
-              <TextField
-                label="Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                fullWidth
-                disabled={submitting}
-                variant="outlined"
-                autoComplete="off"
-                sx={{
-                  '& .MuiOutlinedInput-root': { overflow: 'visible' },
-                  '& .MuiOutlinedInput-notchedOutline': { overflow: 'visible' },
-                  '& .MuiOutlinedInput-root > fieldset': { overflow: 'visible' },
-                  '& .MuiInputLabel-root': { overflow: 'visible', zIndex: 2 },
-                }}
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
-            <Button variant="contained" onClick={handleCreate} disabled={submitting}>Save</Button>
-          </DialogActions>
-        </Dialog>
+        {allowCreate ? (
+          <Dialog open={open} onClose={() => !submitting && setOpen(false)} fullWidth maxWidth="xs">
+            <DialogTitle>Add Device</DialogTitle>
+            <DialogContent sx={{ pt: 1, overflow: 'visible' }}>
+              {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+              <Stack spacing={2}>
+                <TextField
+                  label="Device ID"
+                  value={deviceId}
+                  onChange={(e) => setDeviceId(e.target.value)}
+                  fullWidth
+                  autoFocus
+                  disabled={submitting}
+                  variant="outlined"
+                  autoComplete="off"
+                  sx={{
+                    '& .MuiOutlinedInput-root': { overflow: 'visible' },
+                    '& .MuiOutlinedInput-notchedOutline': { overflow: 'visible' },
+                    '& .MuiOutlinedInput-root > fieldset': { overflow: 'visible' },
+                    '& .MuiInputLabel-root': { overflow: 'visible', zIndex: 2 },
+                  }}
+                />
+                <TextField
+                  label="Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  fullWidth
+                  disabled={submitting}
+                  variant="outlined"
+                  autoComplete="off"
+                  sx={{
+                    '& .MuiOutlinedInput-root': { overflow: 'visible' },
+                    '& .MuiOutlinedInput-notchedOutline': { overflow: 'visible' },
+                    '& .MuiOutlinedInput-root > fieldset': { overflow: 'visible' },
+                    '& .MuiInputLabel-root': { overflow: 'visible', zIndex: 2 },
+                  }}
+                />
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
+              <Button variant="contained" onClick={handleCreate} disabled={submitting}>Save</Button>
+            </DialogActions>
+          </Dialog>
+        ) : null}
       </Paper>
     );
   }
@@ -404,11 +407,11 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
                 hideNextButton
               />
             )}
-            {!isMobile && (
+            {!isMobile && allowCreate ? (
               <Button size="small" variant="contained" onClick={() => setOpen(true)}>
                 Add Device
               </Button>
-            )}
+            ) : null}
             {!isMobile && (
               <>
                 <Button size="small" variant="outlined" color="warning" disabled={!selectedId} onClick={async () => {
@@ -774,49 +777,51 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, selectedId, onSelect, 
           </Box>
         </DialogContent>
       </Dialog>
-      <Dialog open={open} onClose={() => !submitting && setOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>Add Device</DialogTitle>
-        <DialogContent sx={{ pt: 1, overflow: 'visible' }}>
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          <Stack spacing={2}>
-            <TextField
-              label="Device ID"
-              value={deviceId}
-              onChange={(e) => setDeviceId(e.target.value)}
-              fullWidth
-              autoFocus
-              disabled={submitting}
-              variant="outlined"
-              autoComplete="off"
-              sx={{
-                '& .MuiOutlinedInput-root': { overflow: 'visible' },
-                '& .MuiOutlinedInput-notchedOutline': { overflow: 'visible' },
-                '& .MuiOutlinedInput-root > fieldset': { overflow: 'visible' },
-                '& .MuiInputLabel-root': { overflow: 'visible', zIndex: 2 },
-              }}
-            />
-            <TextField
-              label="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              fullWidth
-              disabled={submitting}
-              variant="outlined"
-              autoComplete="off"
-              sx={{
-                '& .MuiOutlinedInput-root': { overflow: 'visible' },
-                '& .MuiOutlinedInput-notchedOutline': { overflow: 'visible' },
-                '& .MuiOutlinedInput-root > fieldset': { overflow: 'visible' },
-                '& .MuiInputLabel-root': { overflow: 'visible', zIndex: 2 },
-              }}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={submitting}>Save</Button>
-        </DialogActions>
-      </Dialog>
+      {allowCreate ? (
+        <Dialog open={open} onClose={() => !submitting && setOpen(false)} fullWidth maxWidth="xs">
+          <DialogTitle>Add Device</DialogTitle>
+          <DialogContent sx={{ pt: 1, overflow: 'visible' }}>
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            <Stack spacing={2}>
+              <TextField
+                label="Device ID"
+                value={deviceId}
+                onChange={(e) => setDeviceId(e.target.value)}
+                fullWidth
+                autoFocus
+                disabled={submitting}
+                variant="outlined"
+                autoComplete="off"
+                sx={{
+                  '& .MuiOutlinedInput-root': { overflow: 'visible' },
+                  '& .MuiOutlinedInput-notchedOutline': { overflow: 'visible' },
+                  '& .MuiOutlinedInput-root > fieldset': { overflow: 'visible' },
+                  '& .MuiInputLabel-root': { overflow: 'visible', zIndex: 2 },
+                }}
+              />
+              <TextField
+                label="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                fullWidth
+                disabled={submitting}
+                variant="outlined"
+                autoComplete="off"
+                sx={{
+                  '& .MuiOutlinedInput-root': { overflow: 'visible' },
+                  '& .MuiOutlinedInput-notchedOutline': { overflow: 'visible' },
+                  '& .MuiOutlinedInput-root > fieldset': { overflow: 'visible' },
+                  '& .MuiInputLabel-root': { overflow: 'visible', zIndex: 2 },
+                }}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button variant="contained" onClick={handleCreate} disabled={submitting}>Save</Button>
+          </DialogActions>
+        </Dialog>
+      ) : null}
       <Dialog open={!!deleteTarget} onClose={() => !deleteLoading && setDeleteTarget(null)} fullWidth maxWidth="xs">
         <DialogTitle>Delete Device</DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
