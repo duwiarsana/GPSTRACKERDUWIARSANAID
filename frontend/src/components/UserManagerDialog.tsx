@@ -19,13 +19,44 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiService } from '../services/api';
 
+const parseSignupLocation = (raw: any): { lat: number; lng: number; accuracy?: number | null; source?: string; timestamp?: string } | null => {
+  if (!raw) return null;
+  try {
+    const loc = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!loc || typeof loc !== 'object') return null;
+    const lat = Number((loc as any)?.lat);
+    const lng = Number((loc as any)?.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+    return loc as any;
+  } catch {
+    return null;
+  }
+};
+
+const InvalidateSize: React.FC<{ tick: any }> = ({ tick }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const t = window.setTimeout(() => {
+      map.invalidateSize();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [map, tick]);
+  return null;
+};
+
 const FitBounds: React.FC<{ points: { lat: number; lng: number }[] }> = ({ points }) => {
   const map = useMap();
   useEffect(() => {
     if (!map) return;
     if (!points.length) return;
-    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]));
-    map.fitBounds(bounds, { padding: [30, 30] });
+    const t = window.setTimeout(() => {
+      map.invalidateSize();
+      const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]));
+      map.fitBounds(bounds, { padding: [30, 30] });
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [map, points]);
   return null;
 };
@@ -73,11 +104,10 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
   const signupRows = useMemo(() => {
     const rows = (users || [])
       .map((u) => {
-        const loc = (u as any)?.signupLocation;
+        const loc = parseSignupLocation((u as any)?.signupLocation);
         const lat = Number(loc?.lat);
         const lng = Number(loc?.lng);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
         return { user: u, lat, lng };
       })
       .filter((v): v is { user: UserRow; lat: number; lng: number } => !!v);
@@ -215,14 +245,6 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
       <DialogTitle>User Manager</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <Alert severity="info">
-            Master admin:
-            <br />
-            Email: <b>master@gps.com</b>
-            <br />
-            Password: <b>mastergps</b>
-          </Alert>
-
           {error ? <Alert severity="error">{error}</Alert> : null}
 
           <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
@@ -271,23 +293,25 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
           <Divider />
 
           <Stack spacing={1}>
-            <Stack direction="row" alignItems="center" spacing={1}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }} spacing={1}>
               <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>
                 Users
               </Typography>
               <Box sx={{ flexGrow: 1 }} />
-              <Button size="small" variant="text" onClick={loadUsers} disabled={loading} sx={{ fontWeight: 800 }}>
-                Refresh
-              </Button>
-              <Button
-                size="small"
-                variant="text"
-                onClick={() => setSignupMapOpen(true)}
-                disabled={loading || signupRows.length === 0}
-                sx={{ fontWeight: 800 }}
-              >
-                View Signup Map
-              </Button>
+              <Stack direction="row" spacing={1} justifyContent={{ xs: 'flex-end', sm: 'flex-end' }}>
+                <Button size="small" variant="text" onClick={loadUsers} disabled={loading} sx={{ fontWeight: 800 }}>
+                  Refresh
+                </Button>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setSignupMapOpen(true)}
+                  disabled={loading}
+                  sx={{ fontWeight: 800 }}
+                >
+                  View Signup Map
+                </Button>
+              </Stack>
             </Stack>
 
             {loading ? (
@@ -300,7 +324,7 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
               const id = ((u as any)?.id || (u as any)?._id || '') as string;
               const label = `${u?.name || 'User'} (${u?.role || 'user'})`;
               const secondary = u?.email || id;
-              const loc = (u as any)?.signupLocation as any;
+              const loc = parseSignupLocation((u as any)?.signupLocation) as any;
               const hasLoc = loc && Number.isFinite(Number(loc.lat)) && Number.isFinite(Number(loc.lng));
               return (
                 <Paper key={id || secondary} variant="outlined" sx={{ p: 1.25, borderRadius: 2 }}>
@@ -349,8 +373,12 @@ const UserManagerDialog: React.FC<Props> = ({ open, onClose, currentUserEmail })
         <Dialog open={signupMapOpen} onClose={() => setSignupMapOpen(false)} fullWidth maxWidth="md">
           <DialogTitle>Signup Locations</DialogTitle>
           <DialogContent>
-            <Box sx={{ height: 420, width: '100%', borderRadius: 2, overflow: 'hidden' }}>
+            {signupRows.length === 0 ? (
+              <Alert severity="info">Tidak ada data lokasi signup yang tersimpan.</Alert>
+            ) : null}
+            <Box sx={{ height: 420, width: '100%', borderRadius: 2, overflow: 'hidden', mt: signupRows.length === 0 ? 1.5 : 0 }}>
               <MapContainer center={[-6.2, 106.816666]} zoom={5} style={{ height: '100%', width: '100%' }}>
+                <InvalidateSize tick={signupMapOpen} />
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
