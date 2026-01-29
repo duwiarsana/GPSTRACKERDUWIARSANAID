@@ -1,6 +1,62 @@
 const User = require('../models/User');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
+const https = require('https');
+
+function isPrivateIp(ip) {
+  const s = String(ip || '').trim().toLowerCase();
+  if (!s) return true;
+  if (s === '::1' || s === 'localhost') return true;
+  if (s.startsWith('127.')) return true;
+  if (s.startsWith('10.')) return true;
+  if (s.startsWith('192.168.')) return true;
+  if (s.startsWith('169.254.')) return true;
+  if (s.startsWith('172.')) {
+    const parts = s.split('.');
+    const n = parseInt(parts[1] || '', 10);
+    if (Number.isFinite(n) && n >= 16 && n <= 31) return true;
+  }
+  if (s.startsWith('fc') || s.startsWith('fd')) return true;
+  if (s.startsWith('fe80')) return true;
+  return false;
+}
+
+function geolocateIp(ip) {
+  return new Promise((resolve) => {
+    const cleaned = String(ip || '').trim();
+    if (!cleaned || isPrivateIp(cleaned)) return resolve(null);
+
+    const url = `https://ipwho.is/${encodeURIComponent(cleaned)}?fields=success,message,latitude,longitude`;
+    const req = https.get(url, (resp) => {
+      let data = '';
+      resp.on('data', (chunk) => {
+        data += chunk;
+      });
+      resp.on('end', () => {
+        try {
+          const json = JSON.parse(data || '{}');
+          if (!json || json.success !== true) return resolve(null);
+          const lat = Number(json.latitude);
+          const lng = Number(json.longitude);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return resolve(null);
+          if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return resolve(null);
+          resolve({ lat, lng });
+        } catch {
+          resolve(null);
+        }
+      });
+    });
+
+    req.on('error', () => resolve(null));
+    req.setTimeout(3500, () => {
+      try {
+        req.destroy();
+      } catch {
+      }
+      resolve(null);
+    });
+  });
+}
 
 // @desc    Register user
 // @route   POST /api/v1/auth/register
@@ -29,6 +85,17 @@ exports.register = asyncHandler(async (req, res, next) => {
     };
   })();
 
+  const resolvedLoc = parsedLoc || (await geolocateIp(signupIp));
+  const finalLoc = resolvedLoc
+    ? {
+        lat: resolvedLoc.lat,
+        lng: resolvedLoc.lng,
+        accuracy: parsedLoc ? parsedLoc.accuracy : null,
+        source: parsedLoc ? 'browser' : 'ip',
+        timestamp: new Date().toISOString(),
+      }
+    : null;
+
   // Create user
   const user = await User.create({
     name,
@@ -36,7 +103,7 @@ exports.register = asyncHandler(async (req, res, next) => {
     password,
     role: 'user',
     signupIp,
-    signupLocation: parsedLoc,
+    signupLocation: finalLoc,
     signupUserAgent,
   });
 
